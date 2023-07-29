@@ -91,12 +91,19 @@ fixed_rom_start
 	;
 	jsr	cons_init
 
+	;
+	; Hello, world!
+	;
+	jsr	iputs
+	fcn	"@thorpej's 6809 Playground\r\n"
+
 1	bra	1B			; hard hang for now.
 
 	;
 	; Library routines
 	;
 	include "../lib/memzero.s"
+	include "../lib/puts.s"
 
 	;
 	; Device drivers.
