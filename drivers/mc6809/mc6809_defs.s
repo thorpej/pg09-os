@@ -28,6 +28,10 @@
 ; Some basic 6809 definitions.
 ;
 
+	if	mc6809_defs_included
+	else
+mc6809_defs_included	equ	1
+
 ;
 ; Condition codes
 ;
@@ -39,3 +43,5 @@ CC_I		equ	(1 << 4)	; IRQ mask
 CC_H		equ	(1 << 5)	; half-carry
 CC_F		equ	(1 << 6)	; FIRQ mask
 CC_E		equ	(1 << 7)	; entire
+
+	endif	; mc6809_defs_included

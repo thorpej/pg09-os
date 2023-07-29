@@ -28,6 +28,10 @@
 ; Definitions for the W65C22 Versatile Interface Adapter (VIA).
 ;
 
+	if	w65c22_defs_included
+	else
+w65c22_defs_included	equ	1
+
 VIA_REG_ORB	equ	0	; Output Register B
 VIA_REG_IRB	equ	0	; Input Register B
 VIA_REG_ORA	equ	1	; Output Register A
@@ -97,3 +101,5 @@ VIA_INT_T2		equ	$20	; T2 expired
 VIA_INT_T1		equ	$40	; T1 expired
 VIA_IFR_ANY		equ	$80	; (IFR) any interrupt is active
 VIA_IER_ALL		equ	$80	; (IER) enable/disable all
+
+	endif	; w65c22_defs_included

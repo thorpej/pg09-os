@@ -28,6 +28,10 @@
 ; Definitions for the W65C21 Peripheral Interface Adapter (PIA).
 ;
 
+	if	w65c21_defs_included
+	else
+w65c21_defs_included	equ	1
+
 PIA_REG_PIA	equ	0		; Peripheral Interface A
 PIA_REG_DDRA	equ	0		; Data Direction Register A
 PIA_REG_CRA	equ	1		; Control Register A
@@ -55,3 +59,5 @@ PIA_CRx_Cx2_MAN_LOW	equ	(6 << 3) ; Cx2 manual output low
 PIA_CRx_Cx2_MAN_HIGH	equ	(7 << 3) ; Cx2 manual output high
 PIA_CRx_IRQ2		equ	(1 << 6) ; IRQ2 active
 PIA_CRx_IRQ1		equ	(1 << 7) ; IRQ1 active
+
+	endif	; w65c21_defs_included
