@@ -103,6 +103,7 @@ fixed_rom_start
 	; Library routines
 	;
 	include "../lib/memzero.s"
+	include "../lib/printhex.s"
 	include "../lib/puts.s"
 
 	;
@@ -110,6 +111,125 @@ fixed_rom_start
 	;
 	include "../drivers/cons/cons.s"
 	include "../drivers/w65c51/w65c51.s"
+
+;
+; brom_switch
+;	Switch ROM banks.
+;
+; Arguments --
+;	A - bank to switch to
+;
+; Returns --
+;	A - previous bank number
+;
+; Clobbers --
+;	None.
+;
+brom_switch
+	pshs	X		; Save X.
+	ldx	#ROM_BANK_REG	; bank register
+bank_switch_common
+	pshs	B		; Save B.
+	ldb	,X		; B = previous bank number
+	sta	,X		; set new bank
+	tfr	B,A		; return old bank in A
+	puls	B,X,PC		; Restore and return.
+
+;
+; lbram_switch
+;	Switch Low RAM banks.
+;
+; Arguments --
+;	A - bank to switch to
+;
+; Returns --
+;	A - previous bank number
+;
+; Clobbers --
+;	None.
+;
+lbram_switch
+	pshs	X		; Save X.
+	ldx	#LBRAM_BANK_REG	; bank register
+	bra	bank_switch_common
+
+;
+; hbram_switch
+;	Switch High RAM banks.
+;
+; Arguments --
+;	A - bank to switch to
+;
+; Returns --
+;	A - previous bank number
+;
+; Clobbers --
+;	None.
+;
+	pshs	X		; Save X.
+	ldx	#HBRAM_BANK_REG	; bank register
+	bra	bank_switch_common
+
+;
+; brom_call
+;	Call a routine in banked ROM.  Routines that are called using
+;	this trampoline have a different ABI.  A normal subroutine call
+;	has a stack that looks like this:
+;
+;		2,S	<maybe arguments pushed onto the stack>
+;		0,S	return address
+;
+;	But a banked-call looks like this:
+;
+;		4,S	<maybe arguments pushed onto the stack>
+;		3,S	scratch area for trampoline
+;		2,S	saved previous bank number
+;		0,S	return address
+;
+;	For this reason, it is recommended that arguments are passed
+;	just in registers.  If you really want to push arguments onto
+;	the stack, consider using the U register to pass that location
+;	to the subroutine.
+;
+; Arguments --
+;	Y - pointer to banked call descriptor.  A banked call descriptor
+;	is a 3 byte datum that has the format:
+;
+;		2,Y	bank number
+;		0,Y	absolute system address of routine
+;
+;	N.B. this layout matches what is pushed onto the stack during
+;	a banked call.
+;
+;	Other arguments defined by the subroutine being called.
+;
+; Returns --
+;	Defined by the subroutine being called.
+;
+; Clobbers --
+;	None.
+;
+brom_call
+	pshs	A		; Save A.
+	;
+	; 0,S		saved A
+	;
+	lda	2,Y		; A = target bank #
+	bsr	brom_switch	; Switch banks.
+	pshs	A		; Save previous bank.
+	;
+	; 1,S		saved A
+	; 0,S		saved bank
+	;
+	lda	1,S		; retrieve saved A
+	jsr	[,Y]		; call the subroutine
+	sta	1,S		; stash what we'll return in A
+	puls	A		; get saved bank
+	;
+	; 0,S		saved A
+	;
+	bsr	brom_switch	; Switch to to saved bank
+	puls	A,PC		; Restore and return.
 
 	;
 	; VECTOR HANDLERS
