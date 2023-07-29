@@ -1,8 +1,10 @@
 ROM_IMAGES=	pg09-from.bin
 
 ASMDEPS=	../../pg09-system/asm/pg09_defs.s			\
-		../../pg09-system/asm/w65c21_defs.s			\
-		../../pg09-system/asm/w65c22_defs.s			\
+		../drivers/cons/cons.s					\
+		../drivers/mc6809/mc6809_defs.s				\
+		../drivers/w65c21/w65c21_defs.s				\
+		../drivers/w65c22/w65c22_defs.s				\
 		../lib/memzero.s
 
 FROM_DEPS=	$(ASMDEPS) pg09-from.s

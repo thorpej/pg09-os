@@ -29,7 +29,8 @@
 ;
 
 	include "../../pg09-system/asm/pg09_defs.s"
-	include "../../pg09-system/asm/w65c21_defs.s"
+	include "../drivers/mc6809/mc6809_defs.s"
+	include "../drivers/w65c21/w65c21_defs.s"
 
 	org	FROM_START
 
@@ -85,12 +86,23 @@ fixed_rom_start
 	;
 	lds	#KSTACK_TOP
 
+	;
+	; Initialize the console.
+	;
+	jsr	cons_init
+
 1	bra	1B			; hard hang for now.
 
 	;
 	; Library routines
 	;
 	include "../lib/memzero.s"
+
+	;
+	; Device drivers.
+	;
+	include "../drivers/cons/cons.s"
+	include "../drivers/w65c51/w65c51.s"
 
 	;
 	; VECTOR HANDLERS
