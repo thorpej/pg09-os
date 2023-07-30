@@ -37,7 +37,7 @@ cat << _EOF > "$tmp_file"
 ;
 _EOF
 
-SysSubr_list=`grep "^SysSubr_" "$sym_file" | cut -f 1 | cut -d _ -f 2`
+SysSubr_list=`grep "^SysSubr_5" "$sym_file" | cut -f 1 | cut -d _ -f 2`
 
 cat << _EOF >> "$tmp_file"
 
@@ -61,8 +61,8 @@ for subr_targ in $SysSubr_list; do
 	awk -v subr_targ=$subr_targ -v subr_name=$subr_name -v \
 	    subr_val=$subr_val \
 		'{
-		 	if ($1 == "SysSubr_" subr_targ) {
-		 		printf("SysSubr_%s equ %s\n", subr_name,
+			if ($1 == "SysSubr_" subr_targ && subr_name != "") {
+				printf("SysSubr_%s equ %s\n", subr_name,
 				    subr_val)
 			}
 		 }' "$sym_file" >> "$tmp_file"
