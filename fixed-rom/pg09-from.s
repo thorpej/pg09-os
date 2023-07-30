@@ -60,6 +60,10 @@ SysSubr_\1	fdb	\1
 	SysSubr	lbram_switch
 	SysSubr	hbram_switch
 
+	SysSubr	cons_getc
+	SysSubr cons_pollc
+	SysSubr cons_putc
+
 pg09os_hello
 	fcc	"@thorpej's 6809 Playground OS, version "
 	fcc	"0.1"		; Change version number here!
