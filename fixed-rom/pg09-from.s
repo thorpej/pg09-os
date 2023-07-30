@@ -34,6 +34,8 @@
 
 	include "../fixed-ram/pg09-fram.exp"
 
+	include "../sys-api/pg09-os.exp"
+
 	setdp	-1	; Disable automatic direct page addressing
 
 	;
