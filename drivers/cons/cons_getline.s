@@ -85,14 +85,14 @@ cons_getline
 	leau	-1,U
 	pshs	X
 	leax	cons_getline_bs_str,PCR
-	bsr	puts
+	lbsr	puts
 	puls	X
 	bra	1B
 
 9	; Line is done.  Emit a CR+LF, get the character count into A,
 	; and return.
 	clr	,U		; NUL-terminate the string
-	bsr	puts_crlf
+	lbsr	puts_crlf
 	lda	getline_cnt
 	ldu	#getline_buf	; Return line buffer in U.
 	puls	B,PC		; Restore and return.
