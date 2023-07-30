@@ -32,10 +32,11 @@
 	include "../drivers/mc6809/mc6809_defs.s"
 	include "../drivers/w65c21/w65c21_defs.s"
 
-	org	FROM_START
+	include "../fixed-ram/pg09-fram.exp"
 
-; Put the standard kernel stack at the top of FRAM.
-KSTACK_TOP	equ	FRAM_START+FRAM_SIZE
+	setdp	-1	; Disable automatic direct page addressing
+
+	org	FROM_START
 
 fixed_rom_start
 	;
