@@ -45,7 +45,6 @@
 	;	jsr	[SysSubr_brom_call]
 	;
 SysSubr		macro
-		export	SysSubr_\1
 SysSubr_\1	fdb	\1
 		endm
 
