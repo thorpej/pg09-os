@@ -40,7 +40,7 @@
 printhex
 	pshs	A,X		; Save registers.
 
-	ldx	#printhex_nybbletab
+	leax	printhex_nybbletab,PCR
 
 	lsra			; A >>= 4
 	lsra
