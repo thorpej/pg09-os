@@ -44,7 +44,8 @@
 ; Clobbers --
 ;	None.
 ;
-cons_init	equ	acia_init
+cons_init
+	jmp	acia_init
 
 ;
 ; cons_putc --
@@ -59,7 +60,8 @@ cons_init	equ	acia_init
 ; Clobbers --
 ;	None.
 ;
-cons_putc	equ	acia_putchar
+cons_putc
+	jmp	acia_putchar
 
 ;
 ; cons_pollc --
@@ -75,7 +77,8 @@ cons_putc	equ	acia_putchar
 ; Clobbers --
 ;	None.
 ;
-cons_pollc	equ	acia_pollchar
+cons_pollc
+	jmp	acia_pollchar
 
 ;
 ; cons_getc --
@@ -91,4 +94,5 @@ cons_pollc	equ	acia_pollchar
 ; Clobbers --
 ;	None.
 ;
-cons_getc	equ	acia_getchar
+cons_getc
+	jmp	acia_getchar
