@@ -18,7 +18,12 @@ all: $(ROM_IMAGES)
 	cd ../fixed-ram && $(MAKE)
 
 pg09-from.bin: $(FROM_DEPS)
-	asm6809 -l pg09-from.lst -o $@ pg09-from.s
+	asm6809 -l pg09-from.lst -E pg09-os.exp -s pg09-from.sym \
+	    -o $@ pg09-from.s
+	sh ./gen-sysapi.sh pg09-from.sym ../sys-api/pg09-os.exp
 
-clean:
-	-rm -f $(ROM_IMAGES) *.lst *.tmp
+clean_fram:
+	cd ../fixed-ram && $(MAKE) clean
+
+clean: clean_fram
+	-rm -f $(ROM_IMAGES) *.exp *.lst *.sym *.tmp
