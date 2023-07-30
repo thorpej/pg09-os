@@ -55,7 +55,7 @@ ${api_file_ub}_included	equ	1
 ;	jsr	[SysSubr_whatever]
 ;
 _EOF
-for subr_targ in $SysSubr_list; do
+(for subr_targ in $SysSubr_list; do
 	subr_name=`grep "${subr_targ}$" "$sym_file" | cut -f 1`
 	subr_val=`grep "^SysSubr_${subr_targ}" "$sym_file" | cut -f 3`
 	if [ x"$subr_name" != x ]; then
@@ -66,9 +66,9 @@ for subr_targ in $SysSubr_list; do
 					printf("SysSubr_%s equ %s\n",
 					    subr_name, subr_val)
 				}
-			 }' "$sym_file" >> "$tmp_file"
+			 }' "$sym_file"
 	fi
-done
+done) | sort >> "$tmp_file"
 
 cat << _EOF >> "$tmp_file"
 
