@@ -39,12 +39,13 @@ pg09_os_exp_included	equ	1
 ;
 ;	jsr	[SysSubr_whatever]
 ;
-SysSubr_cons_pollc equ 57354
-SysSubr_cons_putc equ 57356
-SysSubr_brom_switch equ 57346
-SysSubr_brom_call equ 57344
-SysSubr_cons_getc equ 57352
 SysSubr_hbram_switch equ 57350
 SysSubr_lbram_switch equ 57348
+SysSubr_brom_switch equ 57346
+SysSubr_brom_call equ 57344
+SysSubr_cons_getline equ 57358
+SysSubr_cons_getc equ 57352
+SysSubr_cons_pollc equ 57354
+SysSubr_cons_putc equ 57356
 
 	endif	; pg09_os_exp_included

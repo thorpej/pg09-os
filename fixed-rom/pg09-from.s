@@ -63,6 +63,7 @@ SysSubr_\1	fdb	\1
 	SysSubr	cons_getc
 	SysSubr cons_pollc
 	SysSubr cons_putc
+	SysSubr cons_getline
 
 pg09os_hello
 	fcc	"@thorpej's 6809 Playground OS, version "
@@ -142,6 +143,7 @@ fixed_rom_start
 	; Device drivers.
 	;
 	include "../drivers/cons/cons.s"
+	include "../drivers/cons/cons_getline.s"
 	include "../drivers/w65c51/w65c51.s"
 
 ;
