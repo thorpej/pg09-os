@@ -214,10 +214,13 @@ hbram_switch
 ;
 ;	But a banked-call looks like this:
 ;
-;		4,S	<maybe arguments pushed onto the stack>
+;		8,S	<maybe arguments pushed onto the stack>
+;		6,S	return address (back to caller of trampoline)
+;		5,S	...
+;		4,S	...
 ;		3,S	scratch area for trampoline
 ;		2,S	saved previous bank number
-;		0,S	return address
+;		0,S	return address (back to trampoline)
 ;
 ;	For this reason, it is recommended that arguments are passed
 ;	just in registers.  If you really want to push arguments onto
@@ -229,10 +232,17 @@ hbram_switch
 ;	is a 3 byte datum that has the format:
 ;
 ;		2,Y	bank number
-;		0,Y	absolute system address of routine
+;		0,Y	system address of routine jump table entry
 ;
-;	N.B. this layout matches what is pushed onto the stack during
-;	a banked call.
+;	N.B. this similar to what is pushed onto the stack during
+;	a banked call, but is not the same.  The reason for mandating
+;	a jump table is to de-tangle the symbol namespace between the
+;	fixed ROM image and the banked ROM images.  Banked ROM images
+;	can, as a separate step, define their outside entry points for
+;	other modules to import.
+;
+;	Y register is undefined upon entry to a banked ROM call and
+;	banked ROM calls may use Y without first saving it.
 ;
 ;	Other arguments defined by the subroutine being called.
 ;
@@ -243,26 +253,36 @@ hbram_switch
 ;	None.
 ;
 brom_call
-	pshs	A		; Save A.
+	pshs	A,Y		; Save A and Y.
 	;
+	; 3,S		return address
+	; 2,S		saved Y (lsb)
+	; 1,S		saved Y (msb)
 	; 0,S		saved A
 	;
 	lda	2,Y		; A = target bank #
 	bsr	brom_switch	; Switch banks.
 	pshs	A		; Save previous bank.
 	;
+	; 4,S		return address
+	; 3,S		saved Y (lsb)
+	; 2,S		saved Y (msb)
 	; 1,S		saved A
 	; 0,S		saved bank
 	;
 	lda	1,S		; retrieve saved A
+	ldy	,Y		; load address of jump table slot
 	jsr	[,Y]		; call the subroutine
 	sta	1,S		; stash what we'll return in A
 	puls	A		; get saved bank
 	;
+	; 3,S		return address
+	; 2,S		saved Y (lsb)
+	; 1,S		saved Y (msb)
 	; 0,S		saved A
 	;
 	bsr	brom_switch	; Switch to to saved bank
-	puls	A,PC		; Restore and return.
+	puls	A,Y,PC		; Restore and return.
 
 	;
 	; VECTOR HANDLERS
