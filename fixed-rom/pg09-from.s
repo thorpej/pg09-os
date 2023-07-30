@@ -255,6 +255,7 @@ brom_call
 	; 0,S		saved A
 	;
 	lda	2,Y		; A = target bank #
+	ldy	,Y		; Y = address of jump table slot
 	bsr	brom_switch	; Switch banks.
 	pshs	A		; Save previous bank.
 	;
@@ -265,7 +266,6 @@ brom_call
 	; 0,S		saved bank
 	;
 	lda	1,S		; retrieve saved A
-	ldy	,Y		; load address of jump table slot
 	jsr	[,Y]		; call the subroutine
 	sta	1,S		; stash what we'll return in A
 	puls	A		; get saved bank
