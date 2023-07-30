@@ -61,7 +61,7 @@ puts_adv
 	pshs	A		; Save A
 1	lda	,X+		; A = *X++
 	beq	1F		; Get out if we hit the NUL.
-	jsr	cons_putc	; print the character
+	jsr	[SysSubr_cons_putc] ; print the character
 	bra	1B		; go back around
 1	puls	A,PC		; Restore and return
 

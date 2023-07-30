@@ -47,12 +47,12 @@ printhex
 	lsra
 	lsra
 	lda	A,X		; A = nybble character
-	jsr	cons_putc
+	jsr	[SysSubr_cons_putc]
 
 	lda	,S		; A = saved argument
 	anda	#$0f		; mask off upper nybble
 	lda	A,X		; A = nybble character
-	jsr	cons_putc
+	jsr	[SysSubr_cons_putc]
 
 	puls	A,X,PC		; Restore and return
 
