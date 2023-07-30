@@ -36,19 +36,6 @@
 
 	setdp	-1	; Disable automatic direct page addressing
 
-	org	FROM_START
-
-	;
-	; Put the hello banner here ... a friendly string at the
-	; start of the ROM.  It also prevents FROM_START from
-	; having the same value as any of the SysSubr jump table
-	; symbols below.  See ugliness in fixup-exp.sh.
-	;
-pg09os_hello
-	fcc	"@thorpej's 6809 Playground OS, version "
-	fcc	"0.1"		; Change version number here!
-	fcn	"\r\n"
-
 	;
 	; System SUBROUTINE jump table.  These are called like normal
 	; subroutines, not with SWI as with a system call, i.e.:
@@ -61,13 +48,20 @@ SysSubr_\1	fdb	\1
 		endm
 
 	;
-	; DO NOT CHANGE THE ORDER OF THESE STATEMENTS UNLES YOU KNOW
-	; EXACTLY WHAT YOU ARE DOING!  THESE ARE PART OF THE OS ABI!
+	; DO NOT CHANGE THE ORDER OR THE ORIGIN OF THESE STATEMENTS UNLES
+	; YOU KNOW EXACTLY WHAT YOU ARE DOING!  THESE ARE PART OF THE OS ABI!
 	;
+	org	FROM_START
+
 	SysSubr	brom_call
 	SysSubr brom_switch
 	SysSubr	lbram_switch
 	SysSubr	hbram_switch
+
+pg09os_hello
+	fcc	"@thorpej's 6809 Playground OS, version "
+	fcc	"0.1"		; Change version number here!
+	fcn	"\r\n"
 
 fixed_rom_start
 	;

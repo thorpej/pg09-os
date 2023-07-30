@@ -39,9 +39,9 @@ pg09_os_exp_included	equ	1
 ;
 ;	jsr	[SysSubr_whatever]
 ;
-SysSubr_brom_switch equ 57391
-SysSubr_brom_call equ 57389
-SysSubr_hbram_switch equ 57395
-SysSubr_lbram_switch equ 57393
+SysSubr_brom_switch equ 57346
+SysSubr_brom_call equ 57344
+SysSubr_hbram_switch equ 57350
+SysSubr_lbram_switch equ 57348
 
 	endif	; pg09_os_exp_included
