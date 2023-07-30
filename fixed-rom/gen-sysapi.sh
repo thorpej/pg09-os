@@ -58,14 +58,16 @@ _EOF
 for subr_targ in $SysSubr_list; do
 	subr_name=`grep "${subr_targ}$" "$sym_file" | cut -f 1`
 	subr_val=`grep "^SysSubr_${subr_targ}" "$sym_file" | cut -f 3`
-	awk -v subr_targ=$subr_targ -v subr_name=$subr_name -v \
-	    subr_val=$subr_val \
-		'{
-			if ($1 == "SysSubr_" subr_targ && subr_name != "") {
-				printf("SysSubr_%s equ %s\n", subr_name,
-				    subr_val)
-			}
-		 }' "$sym_file" >> "$tmp_file"
+	if [ x"$subr_name" != x ]; then
+		awk -v subr_targ=$subr_targ -v subr_name=$subr_name -v \
+		    subr_val=$subr_val \
+			'{
+				if ($1 == "SysSubr_" subr_targ) {
+					printf("SysSubr_%s equ %s\n",
+					    subr_name, subr_val)
+				}
+			 }' "$sym_file" >> "$tmp_file"
+	fi
 done
 
 cat << _EOF >> "$tmp_file"
