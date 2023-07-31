@@ -175,7 +175,9 @@ acia_delay_tab
 ;	None.
 ;
 ; Returns --
-;	CC_C is clear if a character is available, set if a not available.
+;	CC_Z is set if there is no character available, and clear if
+;	a character was read from the UART.
+;
 ;	A - Character received from the UART, if available.
 ;
 ; Clobbers --
@@ -186,10 +188,7 @@ acia_pollchar
 	bita	#ACIA_SR_RDRF	; test Receive Data Register Full
 	beq	1F		; not set, return
 	lda	ACIA_REG_DATA	; set, return character
-	andcc	#~CC_C		; clear CC -- success
-	rts
-1	orcc	#CC_C		; set CC -- no character available
-	rts
+1	rts
 
 ;
 ; acia_getchar --

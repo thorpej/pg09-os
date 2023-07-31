@@ -71,8 +71,10 @@ cons_putc
 ;	None.
 ;
 ; Returns --
-;	CC_C is clear if a character is available, set if a not available.
-;	A - Character received from the console, if available.
+;       CC_Z is set if there is no character available, and clear if
+;       a character was read from the console.
+;
+;       A - Character received from the console, if available.
 ;
 ; Clobbers --
 ;	None.
