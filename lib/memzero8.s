@@ -44,27 +44,3 @@ memzero8
 	deca			; A--
 	bne	1B		; Keep going if more bytes left
 	puls	A,X,PC		; Restore and return
-
-;
-; memzero16
-;	Set memory to zero, 16-bit length.
-;
-; Arguments --
-;	X - destination
-;	D - byte count (0 == 0)
-;
-; Returns --
-;	None.
-;
-; Clobbers --
-;	None.
-;
-memzero16
-	pshs	D,X,Y		; Save registers
-	leay	D,X		; Compute ending address
-	pshs	Y		; push it onto the stack
-1	clr	,X+		; *dst++ = 0
-	cmpx	,S		; X == ending address?
-	bne	1B		; Nope, keep going
-	leas	2,S		; pop ending address off stack
-	puls	D,X,Y,PC	; Restore and return

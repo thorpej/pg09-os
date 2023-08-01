@@ -134,7 +134,7 @@ fixed_rom_start
 	;
 	; Library routines
 	;
-	include "../lib/memzero.s"
+	include "../lib/memzero16.s"
 	include "../lib/printhex.s"
 	include "../lib/puts.s"
 
