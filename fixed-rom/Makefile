@@ -6,7 +6,7 @@ ASMDEPS=	../../pg09-system/asm/pg09_defs.s			\
 		../drivers/mc6809/mc6809_defs.s				\
 		../drivers/w65c21/w65c21_defs.s				\
 		../drivers/w65c22/w65c22_defs.s				\
-		../lib/memzero.s					\
+		../lib/memzero16.s					\
 		../lib/puts.s
 
 FROM_DEPS=	$(ASMDEPS) pg09-from.s
