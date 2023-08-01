@@ -30,7 +30,7 @@
 ;
 ; Arguments --
 ;	X - destination
-;	D - byte count (0 == 0)
+;	D - byte count (0 == 65536)
 ;
 ; Returns --
 ;	None.
