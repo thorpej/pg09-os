@@ -41,7 +41,9 @@
 ;
 ;	I then saved a few additional cycles by performing the first
 ;	shift (multiply by 2, which we were doing anyway), and then
-;	stashing that away, so we only have to add in once.
+;	stashing that away, so we only have to add in once.  Dave Warker
+;	(@dwgumby@gardenstate.social) further suggested another opportunity
+;	to save a few bytes and cycles.
 ;
 ;	N.B. This routine could be further optimized on the 6309 by
 ;	using some of the additional instructions in native mode.
@@ -58,7 +60,7 @@ mulDx10
 	aslb
 	rola			; thrice.
 
-	addd	,S		; Add in the x2 value we stashed earlier
+	addd	,S++		; Add in the x2 value we stashed earlier
+				; and pop it off the stack.
 
-	leas	2,S		; pop the scratch value
 	rts			; done!
