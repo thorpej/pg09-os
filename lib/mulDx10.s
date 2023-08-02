@@ -43,7 +43,8 @@
 ;	shift (multiply by 2, which we were doing anyway), and then
 ;	stashing that away, so we only have to add in once.  Dave Warker
 ;	(@dwgumby@gardenstate.social) further suggested another opportunity
-;	to save a few bytes and cycles.
+;	to save a few bytes and cycles by performing the final ADDD and
+;	popping the stack at the same time.
 ;
 ;	N.B. This routine could be further optimized on the 6309 by
 ;	using some of the additional instructions in native mode.
