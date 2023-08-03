@@ -49,17 +49,13 @@
 ;	N.B. This routine could be further optimized on the 6309 by
 ;	using some of the additional instructions in native mode.
 ;
+;	Uses asm_macros.inc
+;
 mulDx10
-	aslb			; shift D left one bit...
-	rola			; once...
-
+	M_asld			; shift D left once..
 	pshs	D		; (stash it away for later...)
-
-	aslb
-	rola			; twice...
-
-	aslb
-	rola			; thrice.
+	M_asld			; ...twice...
+	M_asld			; ...thrice.
 
 	addd	,S++		; Add in the x2 value we stashed earlier
 				; and pop it off the stack.
