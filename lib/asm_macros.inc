@@ -29,16 +29,29 @@
 ;
 
 ;
-; The 6309 has an ASLD instruction.  We can emulate it with a 2-instruction
-; sequence on 6809.
+; Macros for some 6309 instructions that we can emulate on the 6809
+; with multi-instruction sequences.
 ;
 	if	CONFIG_6309
+
 M_asld		macro
 		asld
 		endm
-	else
+
+M_clrd		macro
+		clrd
+		endm
+
+	else	; 6809
+
 M_asld		macro
 		aslb
 		rola
 		endm
+
+M_clrd		macro
+		clra		; Could use LDD #0, but that's 1 byte
+		clrb		; longer despite being 1 cycle faster
+		endm
+
 	endif	; CONFIG_6309
