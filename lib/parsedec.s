@@ -40,7 +40,7 @@
 ;	CC_Z is clear if any valid digits were parsed, CC_Z set and the
 ;	value in D is 0 if no valid digits were found.
 ;
-;	CC_V is set if the number overlowed 16 bits.  The value
+;	CC_V is set if the number overflowed 16 bits.  The value
 ;	$FFFF is loaded into D in that case.  If the value fits in
 ;	16 bits, then CC_V is cleared.
 ;
