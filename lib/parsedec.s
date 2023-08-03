@@ -73,7 +73,7 @@ parsedec
 	bgt	3F		; nope.
 	inc	,S		; increment digit count
 	cmpy	#6553		; check for overflow
-	bge	6F
+	bhs	6F
 2	suba	#'0'		; convert ASCII to value
 	exg	D,Y		; running total into D for multiply
 	lbsr	mulDx10		; D = D * 10
