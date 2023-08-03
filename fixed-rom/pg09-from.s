@@ -31,6 +31,7 @@
 	include "../../pg09-system/asm/pg09_defs.s"
 	include "../drivers/mc6809/mc6809_defs.s"
 	include "../drivers/w65c21/w65c21_defs.s"
+	include "../lib/asm_macros.inc"
 
 	include "../fixed-ram/pg09-fram.exp"
 
