@@ -143,9 +143,7 @@ printdecs16
 	tsta			; argument negative?
 	bpl	printdec16_common ; Nope...
 
-	clra			; D = 0 (could LDD #0, but it's one byte
-	clrb			; longer despite being one cycle faster)
-				; (N.B. 6309 has a CLRD, which is 2B2C).
+	M_clrd			; D = 0
 	subd	0,S		; D -= argument
 	std	0,S		; Store it back.
 

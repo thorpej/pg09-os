@@ -86,8 +86,7 @@ udiv16
 	; 1,S	CC
 	; 0,S	loop count
 	;
-	clra			; Zero out D
-	clrb
+	M_clrd			; Zero out D
 
 	;
 	; Loop 16 times, trying to subtract the divisor at each digit
