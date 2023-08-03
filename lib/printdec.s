@@ -143,8 +143,12 @@ printdecs16
 	tsta			; argument negative?
 	bpl	printdec16_common ; Nope...
 
+	if	CONFIG_6309
+	negd			; D = 0 - D
+	else
 	M_clrd			; D = 0
 	subd	0,S		; D -= argument
+	endif	; CONFIG_6309
 	std	0,S		; Store it back.
 
 	lda	#'-'		; print a unary - character
