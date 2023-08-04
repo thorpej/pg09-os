@@ -169,9 +169,9 @@ fixed_rom_start
 	;
 	ldx	#pg09_hbram_probe_tab
 	ldy	#HBRAM_START
-	lda	#-1
+	clra				; table index / probed chip count
 
-1	ldb	,X+
+1	ldb	A,X
 	stb	HBRAM_BANK_REG
 
 	clr	,Y			; Store a 0 and make sure it sticks
@@ -184,26 +184,25 @@ fixed_rom_start
 	cmpb	#$55
 	bne	2F
 
-	aslb				; Store $AA and make sure it sticks
-	stb	,Y
+	asl	,Y			; Store $AA and make sure it sticks
 	ldb	,Y
 	cmpb	#$AA
 	bne	2F
 
-	inca				; Looks good!
-	cmpa	#3			; Have we probed all 4 chips?
+	inca				; Increment chip count.
+	cmpa	#4			; Have we probed all 4 chips?
 	blt	1B			; Nope, go back around.
 
 2	tsta
-	bmi	panic_bad_hbram		; < 0 means no HBRAM worked.
-	ldx	#pg09_hbram_probe_tab
+	beq	panic_bad_hbram		; 0 means no HBRAM worked.
+	deca				; convert chip count to table index
 	ldb	A,X			; get max HBRAM bank #
 	stb	hbram_max_bank		; stash it for later
 	clr	HBRAM_BANK_REG		; back to bank 0
 
-	inca				; Convert to 16-bit decimal KB
-	asla				; value for printing.
-	clrb
+	inca				; Back to chip count.
+	asla				; Multiply by 2 to form the MSB
+	clrb				; of # KB of HBRAM.
 
 	ldx	#pg09_hbram_banner
 	jsr	puts
@@ -211,7 +210,12 @@ fixed_rom_start
 	ldx	#pg09_hbram_banner_tail
 	jsr	puts
 
-1	bra	1B			; hard hang for now.
+	; XXX
+	ldx	#panic_no_monitor_yet
+	jsr	panic
+
+panic_no_monitor_yet
+	fcn	"no monitor environment yet - get to work, slacker!"
 
 panic_bad_hbram
 	ldx	#pg09_hbram_probe_bad_str
