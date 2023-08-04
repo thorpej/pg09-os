@@ -70,6 +70,29 @@ pg09os_hello
 	fcc	"0.1"		; Change version number here!
 	fcn	"\r\n"
 
+pg09_cpu_banner
+	fcc	"CPU: "
+	if	CONFIG_6309
+	fcc	"6309E"
+	else
+	fcc	"6809E"
+	endif
+	fcn	" @ "
+pg09_cpu_banner_tail
+	fcn	"MHz\r\n"
+
+pg09_hbram_banner
+	fcn	"HBRAM: "
+pg09_hbram_banner_tail
+	fcn	"KB\r\n"
+
+pg09_hbram_probe_bad_str
+	fcn	"bad HBRAM"
+
+; HBRAM bank values for the last bank of each 512K RAM chip.
+pg09_hbram_probe_tab
+	fcb	$3F, $7F, $BF, $FF
+
 fixed_rom_start
 	;
 	; Initialize memory banking.
@@ -130,14 +153,78 @@ fixed_rom_start
 	ldx	#pg09os_hello
 	jsr	puts
 
+	;
+	; Report the CPU we're built for and it's clock speed.
+	;
+	ldx	#pg09_cpu_banner
+	jsr	puts
+	lda	CLOCK_SPEED_REG
+	jsr	printdec8
+	ldx	#pg09_cpu_banner_tail
+	jsr	puts
+
+	;
+	; Probe the High Banked RAM size.  We assume there's at least
+	; 512KB, because the kernel requires it.
+	;
+	ldx	#pg09_hbram_probe_tab
+	ldy	#HBRAM_START
+	lda	#-1
+
+1	ldb	,X+
+	stb	HBRAM_BANK_REG
+
+	clr	,Y			; Store a 0 and make sure it sticks
+	tst	,Y
+	bne	2F
+
+	ldb	#$55			; Store $55 and make sure it sticks
+	stb	,Y
+	ldb	,Y
+	cmpb	#$55
+	bne	2F
+
+	aslb				; Store $AA and make sure it sticks
+	stb	,Y
+	ldb	,Y
+	cmpb	#$AA
+	bne	2F
+
+	inca				; Looks good!
+	cmpa	#3			; Have we probed all 4 chips?
+	blt	1B			; Nope, go back around.
+
+2	tsta
+	bmi	panic_bad_hbram		; < 0 means no HBRAM worked.
+	ldx	#pg09_hbram_probe_tab
+	ldb	A,X			; get max HBRAM bank #
+	stb	hbram_max_bank		; stash it for later
+	clr	HBRAM_BANK_REG		; back to bank 0
+
+	inca				; Convert to 16-bit decimal KB
+	asla				; value for printing.
+	clrb
+
+	ldx	#pg09_hbram_banner
+	jsr	puts
+	jsr	printdec16
+	ldx	#pg09_hbram_banner_tail
+	jsr	puts
+
 1	bra	1B			; hard hang for now.
+
+panic_bad_hbram
+	ldx	#pg09_hbram_probe_bad_str
+	jmp	panic
 
 	;
 	; Library routines
 	;
 	include "../lib/memzero16.s"
 	include "../lib/printhex.s"
+	include "../lib/printdec.s"
 	include "../lib/puts.s"
+	include "../lib/udiv16.s"
 
 	;
 	; Device drivers.
@@ -285,6 +372,26 @@ brom_call
 	;
 	bsr	brom_switch	; Switch to to saved bank
 	puls	A,Y,PC		; Restore and return.
+
+;
+; panic
+;	Something is seriously effed up.
+;
+; Arguments --
+;	X - panic string
+;
+; Returns --
+;	LOL, no.
+;
+; Clobbers --
+;	WTF cares?
+;
+panic
+	jsr	iputs
+	fcn	"panic: "
+	jsr	puts
+	jsr	puts_crlf
+1	bra	1B
 
 	;
 	; VECTOR HANDLERS

@@ -46,6 +46,9 @@ getline_maxcnt	equ	254	; leaves room for terminating NUL
 getline_cnt	rmb	1
 getline_buf	rmb	getline_maxcnt+1
 
+	export	hbram_max_bank
+hbram_max_bank	rmb	1
+
 ; Put the standard kernel stack at the top of FRAM.
 	export	KSTACK_TOP
 KSTACK_TOP	equ	FRAM_START+FRAM_SIZE
