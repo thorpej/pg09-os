@@ -459,15 +459,13 @@ monitor_getline
 	puls	U,PC			; Restore and return
 
 monitor_cmdtab
-	fcc	"RBAN",'K'+$80
-	fcc	"LBAN",'K'+$80
-	fcc	"HBAN",'K'+$80
+	fcc	'@'+$80			; access memory
+	fcc	'?'+$80			; help
 	fcc	0
 
 monitor_cmdjmptab
-	fdb	cmd_rbank
-	fdb	cmd_lbank
-	fdb	cmd_hbank
+	fdb	cmd_access_mem
+	fdb	cmd_help
 	fdb	cmd_unknown
 
 ;
@@ -479,7 +477,7 @@ cmd_unknown
 	beq	1F			; don't report error for empty line
 	jsr	error
 	jsr	iputs
-	fcn	"unknown command\r\n"
+	fcn	"unknown command - ? for help\r\n"
 1	jmp	monitor_main
 
 ;
@@ -494,73 +492,62 @@ syntax_error
 	jmp	monitor_main
 
 ;
-; cmd_rbank
-;	Set the Banked ROM bank.
+; cmd_access_mem
+;	Access memory.
 ;
-;	RBANK (ws|empty)		- print current ROM bank
-;	RBANK ws NUM8 (ws|empty)	- switch ROM banks
+;	@addr				- print 1 byte
+;	@				- print 1 byte at next address
+;	@addr,len			- print len bytes
+;	@,len				- print len bytes next address
+;	@addr val [val ...]		- set bytes starting at address
+;	@ val [val ...]			- set bytes startint at next address
 ;
-cmd_rbank
-	jsr	parsews
-	beq	98F		; no WS, check for no arg
-	jsr	parsedec	; D = number
-	beq	98F		; no number, check for no arg
-	tsta
-	bne	99F		; number > 255, error
-	cmpb	#BROM_MAXBANK
-	bhi	99F		; number > max bank, error
-	tfr	B,A		; new bank # into A
-	pshs	A		; push new bank # onto stack
-	jsr	brom_switch	; switch to new bank, A = old bank
-	ldx	#cmd_rbankstr
-	jsr	puts
-	jsr	printdec8
-	ldx	#cmd_arrowstr
-	jsr	puts
-	lda	,S+		; A = saved new bank, pop from stack
-	jsr	printdec8
-	jsr	puts_crlf
-	jmp	monitor_main
-
-98	jsr	parseeol
-	beq	syntax_error	; Not EOL, syntax error
-	lda	ROM_BANK_REG
-	ldx	#cmd_rbankstr
-	jsr	puts
-	jsr	printdec8
-	jsr	puts_crlf
-	jmp	monitor_main
-
-99	jsr	iputs
-	fcn	"Valid ROM banks: 0 - "
-	lda	#BROM_MAXBANK
-	jsr	printdec8
-	jsr	puts_crlf
-	jmp	monitor_main
-
-cmd_rbankstr
-	fcn	"ROM bank: "
-cmd_arrowstr
-	fcn	" -> "
-
-;
-; cmd_lbank
-;	Set the Low Banked RAM bank.
-;
-cmd_lbank
+cmd_access_mem
 	jsr	error
 	jsr	iputs
-	fcn	"LBANK not yet implemented\r\n"
+	fcn	"@ not yet implemented\r\n"
 	jmp	monitor_main
 
 ;
-; cmd_hbank
-;	Set the High Banked RAM bank.
+; cmd_help
+;	Get help.
 ;
-cmd_hbank
-	jsr	error
+cmd_help
+	; First check for command help.
+	jsr	parseeol		; if we are at EOL
+	bne	cmd_help_generic	; then generic help it is.
+
+	; Whitespace already consumed by parseeol().  Now look up
+	; the command in the help table.
+	ldy	#monitor_helptab	; Y = help table
+	jsr	parsetbl_lookup		; A = command index
+	asla				; index -> offset
+	ldy	#monitor_helpjmptab	; Y = help jump table
+	jmp	[A,Y]			; go get the help
+
+monitor_helptab
+	fcc	'@'+$80			; access memory
+	fcc	0
+
+monitor_helpjmptab
+	fdb	cmd_help_access_mem
+	fdb	cmd_help_generic
+
+cmd_help_generic
 	jsr	iputs
-	fcn	"HBANK not yet implemented\r\n"
+	fcc	"Available commands:\r\n"
+	fcc	"@     - access memory\r\n"
+	fcn	"?     - help\r\n"
+	jmp	monitor_main
+
+cmd_help_access_mem
+	jsr	iputs
+	fcc	"@addr               - print 1 byte\r\n"
+	fcc	"@                   - print 1 byte at next address\r\n"
+	fcc	"@addr,len           - print len bytes\r\n"
+	fcc	"@,len               - print len bytes at next address\r\n"
+	fcc	"@addr val [val ...] - set bytes starting at address\r\n"
+	fcn	"@ val [val ...]     - set bytes starting at next address\r\n"
 	jmp	monitor_main
 
 	;
