@@ -25,7 +25,7 @@
 ;       
 
 ;
-; printhex
+; printhex8
 ;	Prints an 8-bit hexadecimal number
 ;
 ; Arguments --
@@ -37,7 +37,7 @@
 ; Clobbers --
 ;	None.
 ;
-printhex
+printhex8
 	pshs	A,X		; Save registers.
 
 	leax	printhex_nybbletab,PCR
