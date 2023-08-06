@@ -74,7 +74,7 @@ printhex_nybbletab
 ;
 printhex16
 	pshs	D		; Save D
-	bsr	printhex	; Upper byte alredy in A
+	bsr	printhex8	; Upper byte alredy in A
 	tfr	B,A		; Get lower byte (in B) into A
-	bsr	printhex	; Print it.
+	bsr	printhex8	; Print it.
 	puls	D,PC		; Restore and return.
