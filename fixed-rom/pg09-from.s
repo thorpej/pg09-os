@@ -210,12 +210,7 @@ fixed_rom_start
 	ldx	#pg09_hbram_banner_tail
 	jsr	puts
 
-	; XXX
-	ldx	#panic_no_monitor_yet
-	jsr	panic
-
-panic_no_monitor_yet
-	fcn	"no monitor environment yet - get to work, slacker!"
+	jmp	monitor_main		; Go into the main monitor loop!
 
 panic_bad_hbram
 	ldx	#pg09_hbram_probe_bad_str
@@ -225,9 +220,15 @@ panic_bad_hbram
 	; Library routines
 	;
 	include "../lib/memzero16.s"
+	include "../lib/parsedec.s"
+	include "../lib/parsetbl.s"
+	include "../lib/parsews.s"
+	include "../lib/parseeol.s"
 	include "../lib/printhex.s"
 	include "../lib/printdec.s"
 	include "../lib/puts.s"
+	include "../lib/toupper.s"
+	include "../lib/mulDx10.s"
 	include "../lib/udiv16.s"
 
 	;
@@ -396,6 +397,171 @@ panic
 	jsr	puts
 	jsr	puts_crlf
 1	bra	1B
+
+;
+; error
+;	Print an error message prefix.
+;
+; Arguments --
+;	None.
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+error
+	jsr	iputs
+	fcn	"ERROR: "
+	rts
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; Monitor environment -- main loop
+	;
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+monitor_main
+	jsr	monitor_getline		; X = command line
+	jsr	parsews			; toss leading whitespace
+	ldy	#monitor_cmdtab		; Y = command table
+	jsr	parsetbl_lookup		; A = command index
+	asla				; index -> offset
+	ldy	#monitor_cmdjmptab	; Y = command jump table
+	jmp	[A,Y]			; go run command
+
+;
+; monitor_getline
+;	Get an input line for the monitor environment.
+;
+; Arguments --
+;	None.
+;
+; Returns --
+;	X -- pointer to the input buffer.
+;
+;	A -- Also contains the strlen() of the input line.
+;
+; Clobbers --
+;	None.
+;
+; Notes --
+;	SysSubr_cons_getline returns the input buffer in U, we
+;	move it into X.
+;
+monitor_getline
+	pshs	U			; Save U
+	jsr	iputs
+	fcn	"pgmon> "
+	jsr	[SysSubr_cons_getline]	; Get the input line.
+	tfr	U,X			; Return pointer in Y
+	puls	U,PC			; Restore and return
+
+monitor_cmdtab
+	fcc	"RBAN",'K'+$80
+	fcc	"LBAN",'K'+$80
+	fcc	"HBAN",'K'+$80
+	fcc	0
+
+monitor_cmdjmptab
+	fdb	cmd_rbank
+	fdb	cmd_lbank
+	fdb	cmd_hbank
+	fdb	cmd_unknown
+
+;
+; cmd_unknown
+;	Unknown command handler.
+;
+cmd_unknown
+	tst	,X
+	beq	1F			; don't report error for empty line
+	jsr	error
+	jsr	iputs
+	fcn	"unknown command\r\n"
+1	jmp	monitor_main
+
+;
+; syntax_error
+;
+;	Generic syntax error handler for commands.
+;
+syntax_error
+	jsr	error
+	jsr	iputs
+	fcn	"syntax error\r\n"
+	jmp	monitor_main
+
+;
+; cmd_rbank
+;	Set the Banked ROM bank.
+;
+;	RBANK (ws|empty)		- print current ROM bank
+;	RBANK ws NUM8 (ws|empty)	- switch ROM banks
+;
+cmd_rbank
+	jsr	parsews
+	beq	98F		; no WS, check for no arg
+	jsr	parsedec	; D = number
+	beq	98F		; no number, check for no arg
+	tsta
+	bne	99F		; number > 255, error
+	cmpb	#BROM_MAXBANK
+	bhi	99F		; number > max bank, error
+	tfr	B,A		; new bank # into A
+	pshs	A		; push new bank # onto stack
+	jsr	brom_switch	; switch to new bank, A = old bank
+	ldx	#cmd_rbankstr
+	jsr	puts
+	jsr	printdec8
+	ldx	#cmd_arrowstr
+	jsr	puts
+	lda	,S+		; A = saved new bank, pop from stack
+	jsr	printdec8
+	jsr	puts_crlf
+	jmp	monitor_main
+
+98	jsr	parseeol
+	beq	syntax_error	; Not EOL, syntax error
+	lda	ROM_BANK_REG
+	ldx	#cmd_rbankstr
+	jsr	puts
+	jsr	printdec8
+	jsr	puts_crlf
+	jmp	monitor_main
+
+99	jsr	iputs
+	fcn	"Valid ROM banks: 0 - "
+	lda	#BROM_MAXBANK
+	jsr	printdec8
+	jsr	puts_crlf
+	jmp	monitor_main
+
+cmd_rbankstr
+	fcn	"ROM bank: "
+cmd_arrowstr
+	fcn	" -> "
+
+;
+; cmd_lbank
+;	Set the Low Banked RAM bank.
+;
+cmd_lbank
+	jsr	error
+	jsr	iputs
+	fcn	"LBANK not yet implemented\r\n"
+	jmp	monitor_main
+
+;
+; cmd_hbank
+;	Set the High Banked RAM bank.
+;
+cmd_hbank
+	jsr	error
+	jsr	iputs
+	fcn	"HBANK not yet implemented\r\n"
+	jmp	monitor_main
 
 	;
 	; VECTOR HANDLERS
