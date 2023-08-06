@@ -25,7 +25,43 @@
 ;       
 
 ;
-; parsehex
+; parsehex8
+;	Parses an unsigned 8-bit hexadecimal number in ASCII
+;
+; Arguments --
+;	X - pointer to the buffer to be parsed
+;
+; Returns --
+;	A - value of the parsed number.
+;
+;	X - Updated to point to the first non-hex character following
+;	the number.
+;
+;	CC_Z is clear if any valid digits were parsed, CC_Z set and the
+;	value in A is 0 if no valid digits were found.
+;
+;	CC_V is set if the number overflowed 8 bits.  The value
+;	$FF is loaded into A in that case.  If the value fits in
+;	8 bits, then CC_V is cleared.
+;
+parsehex8
+	pshs	B		; Save B
+	jsr	parsehex16	; Parse the number
+	beq	1F		; get out now if parsehex16() returne false
+	bvs	1F		; ...or if it overflowed (A = $FF already)
+	tsta			; Conveniently clears CC_V.
+	bne	2F		; If A != 0, we overflowed 8 bits.
+	tfr	B,A		; Return value in A.
+	andcc	#~CC_Z		; clear CC_Z to return true.
+
+1	puls	B,PC		; Restore and return
+
+2	lda	#$FF
+	orcc	#CC_V		; CC_Z is clear by virtue of getting here.
+	bra	1B
+
+;
+; parsehex16
 ;	Parses an unsigned 16-bit hexadecimal number in ASCII
 ;
 ; Arguments --
@@ -47,7 +83,7 @@
 ; Clobbers --
 ;	None.
 ;
-parsehex
+parsehex16
 	;
 	; We are going to loop through the digits, one by one,
 	; multiply the running total by 16 and adding the new
