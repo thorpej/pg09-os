@@ -43,7 +43,7 @@
 ;
 parsews
 	pshs	A		; Save A, since we use it
-	leas	-1,S		; Scratch space to count whitespace chars
+	clr	,-S		; Push a zero onto the stack.
 
 	;
 	; Loop through and continue until we get to a non-whitespace
