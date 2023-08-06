@@ -477,8 +477,8 @@ cmd_unknown
 	beq	1F			; don't report error for empty line
 	jsr	error
 	jsr	iputs
-	fcn	"unknown command - ? for help\r\n"
-1	jmp	monitor_main
+	fcn	"unknown command"
+	bra	suggest_help
 
 ;
 ; syntax_error
@@ -488,8 +488,12 @@ cmd_unknown
 syntax_error
 	jsr	error
 	jsr	iputs
-	fcn	"syntax error\r\n"
-	jmp	monitor_main
+	fcn	"syntax error"
+
+suggest_help
+	jsr	iputs
+	fcn	" - ? for help\r\n"
+1	jmp	monitor_main
 
 ;
 ; cmd_access_mem
@@ -537,7 +541,8 @@ cmd_help_generic
 	jsr	iputs
 	fcc	"Available commands:\r\n"
 	fcc	"@     - access memory\r\n"
-	fcn	"?     - help\r\n"
+	fcc	"?     - help\r\n"
+	fcn	"Use '? <cmd>' for additional help.\r\n"
 	jmp	monitor_main
 
 cmd_help_access_mem
