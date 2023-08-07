@@ -501,24 +501,37 @@ suggest_help
 ; cmd_access_mem
 ;	Access memory.
 ;
-;	@addr				- print 1 byte
-;	@				- print 1 byte at next address
-;	@addr,len			- print len bytes
-;	@,len				- print len bytes next address
-;	@addr val [val ...]		- set bytes starting at address
-;	@ val [val ...]			- set bytes startint at next address
+;	@addr			- print 1 byte
+;	@			- print 1 byte at next address
+;	@addr,len		- print len bytes
+;	@,len			- print len bytes next address
+;	@addr val [val ...]	- set bytes starting at address
+;	@ val [val ...]		- set bytes starting at next address
+;	@addr,len val		- set length bytes at address to value
+;	@,len val		- set length bytes at next address to value
 ;
 cmd_access_mem
-	; Check for an immediate comma; that's a read (with length).
-	lda	,X
-	cmpa	#','
-	beq	cmd_access_mem_rd
+	jsr	parse_addr	; D = address
+	beq	1F		; No address specified.
+	std	mem_access_addr	; Stash the address
 
-	; Check for whitespace -- that would indicate a write.
-	jsr	parsews
-	beq	cmd_access_mem_rd
-	jsr	parseeol	; unless it's just before EOL
-	bne	cmd_access_mem_rd
+1	lda	,X		; A = *X
+	cmpa	#','		; Is it a comma?
+	bne	1F		; No length specified.
+
+	leax	1,X		; Advance past comma.
+	jsr	parsedec	; D = length
+	lbeq	syntax_error	; Not a number? Syntax error.
+	lbvs	syntax_error	; Overflow? Syntax error.
+	bra	2F
+
+1	ldd	#1		; No length specifed -> 1 byte
+2	std	mem_access_len
+
+	jsr	parsews		; gobble up the whitespace
+	beq	cmd_access_mem_rd ; no whitespace... probably a read.
+	jsr	parseeol	; check for EOL
+	bne	cmd_access_mem_rd ; definitely a read.
 
 	jsr	error
 	jsr	iputs
@@ -526,51 +539,20 @@ cmd_access_mem
 	jmp	monitor_main
 
 cmd_access_mem_rd
-	; Check for EOL.  If so, it's just a 1 byte access.
-	jsr	parseeol
-	bne	cmd_access_mem_rd_len1
-	lda	,X		; A = *X
-	cmpa	#','		; Is it a comma?
-	beq	cmd_access_mem_rd_getlen
-	jsr	parse_addr	; D = address
-	beq	syntax_error	; Not an address? Syntax error.
-	std	mem_access_addr	; Stash the address
-	lda	,X		; A = *X
-	cmpa	#','		; Is it a comma?
-	beq	cmd_access_mem_rd_getlen
-	; Check again for EOL, if so, it's just a 1 byte access.
-	jsr	parseeol
-	lbeq	syntax_error	; Not EOL? Syntax error.
-	bra	cmd_access_mem_rd_len1
-
-cmd_access_mem_rd_getlen
-	lda	,X+		; A = *X++
-	cmpa	#','		; Is it a comma?
-	lbne	syntax_error	; No? Syntax error.
-	jsr	parsedec	; D = length
-	lbeq	syntax_error	; Not a number? Syntax error.
-	lbvs	syntax_error	; Overflow? Syntax error.
-	std	mem_access_len
-	bra	cmd_access_mem_rd_havelen
-
-cmd_access_mem_rd_len1
-	ldd	#1		; just one byte
-	std	mem_access_len
-
-cmd_access_mem_rd_havelen
-	jsr	parseeol	; Make sure we're at EOL
-	lbeq	syntax_error	; No?  Syntax error.
-
-	ldy	mem_access_addr	; Y = address to access
-	tfr	Y,D		; Print the address.
-	jsr	printhex16
-	jsr	iputs
-	fcn	": "
+	jsr	parseeol	; make sure we're at EOL
+	lbeq	syntax_error	; No -> syntax error
 
 	leas	-1,S		; Push a slot onto the stack
 				; for counting bytes.
 
-1	lda	#16		; Byte count = 8
+	ldy	mem_access_addr	; Y = address to access
+
+1	tfr	Y,D		; Print the address.
+	jsr	printhex16
+	jsr	iputs
+	fcn	": "
+
+	lda	#16		; Byte count = 8
 	sta	,S
 
 2	lda	,Y+		; A = byte being accessed
@@ -586,8 +568,7 @@ cmd_access_mem_rd_havelen
 	dec	,S		; byte count--
 	bne	2B		; just go around again if not 0
 
-	jsr	iputs		; New line and indent for the next
-	fcn	"\r\n      "	; set of bytes.
+	jsr	puts_crlf
 	bra	1B
 
 3	sty	mem_access_addr	; Remember where we left off.
