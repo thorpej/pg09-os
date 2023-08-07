@@ -540,10 +540,10 @@ cmd_access_mem
 	;
 	; D will still contain that length from above.
 	;
+	ldy	mem_access_addr	; Y = address to access
 	cmpd	#0		; D == 0?
 	bne	cmd_access_memset ; No -> memset()
 
-	ldy	mem_access_addr	; Y = address to access
 cmd_access_mem_wr
 	jsr	parsehex8	; A = next value
 	beq	syntax_error	; Z set? Syntax error.
@@ -555,10 +555,20 @@ cmd_access_mem_wr
 	jmp	monitor_main	; All done.
 
 cmd_access_memset
-
-	jsr	error
-	jsr	iputs
-	fcn	"@ for set not yet implemented\r\n"
+	jsr	parsehex8	; A = value
+	beq	syntax_error	; Z set? Syntax error.
+	bvs	syntax_error	; V set? Syntax error.
+	pshs	A		; Stash it temporarily.
+	jsr	parseeol	; Only one value allowed.
+	lbeq	syntax_error	; Not EOL? Syntax error.
+	ldd	mem_access_len	; D = length
+	leax	D,Y		; X = end address
+	puls	A		; Get value back into A
+	pshs	X		; Get end address onto stack
+1	sta	,Y+
+	cmpy	,S		; Y == end?
+	bne	1B		; Nope, keep going.
+	; No need to pop length off the stack.
 	jmp	monitor_main
 
 cmd_access_mem_rd
