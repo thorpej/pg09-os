@@ -548,17 +548,27 @@ cmd_access_mem_rd
 	ldy	mem_access_addr	; Y = address to access
 
 1	tfr	Y,D		; Print the address.
+	andb	#$F0		; Always align start address.
+	tfr	D,Y
 	jsr	printhex16
 	jsr	iputs
-	fcn	": "
+	fcn	":"
 
 	lda	#16		; Byte count = 8
 	sta	,S
 
+2	cmpy	mem_access_addr
+	bhs	2F
+	jsr	iputs
+	fcn	" .."
+	dec	,S
+	leay	1,Y
+	bra	2B
+
 2	lda	,Y+		; A = byte being accessed
-	jsr	printhex8
 	jsr	iputs
 	fcn	" "
+3	jsr	printhex8
 
 	ldd	mem_access_len
 	subd	#1		; Subtract 1 from length
