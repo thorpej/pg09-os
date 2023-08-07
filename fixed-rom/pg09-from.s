@@ -660,6 +660,11 @@ symbolic_addrtab
 	fcc	"LBRAM_BANK_RE",'G'+$80
 	fcc	"HBRAM_BANK_RE",'G'+$80
 	fcc	"CLOCK_SPEED_RE",'G'+$80
+	fcc	"LBRAM_STAR",'T'+$80
+	fcc	"FRAM_STAR",'T'+$80
+	fcc	"HBRAM_STAR",'T'+$80
+	fcc	"BROM_STAR",'T'+$80
+	fcc	"FROM_STAR",'T'+$80
 	fcb	0
 
 symbolic_addrtab_cnt	equ	4
@@ -669,6 +674,11 @@ symbolic_addrs
 	fdb	LBRAM_BANK_REG
 	fdb	HBRAM_BANK_REG
 	fdb	CLOCK_SPEED_REG
+	fdb	LBRAM_START
+	fdb	FRAM_START
+	fdb	HBRAM_START
+	fdb	BROM_START
+	fdb	FROM_START
 
 ;
 ; cmd_help
