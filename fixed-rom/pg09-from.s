@@ -695,10 +695,8 @@ symbolic_addrs
 	fdb	HBRAM_BANK_REG
 	fdb	CLOCK_SPEED_REG
 	fdb	LBRAM_START
-	fdb	FRAM_START
 	fdb	HBRAM_START
 	fdb	BROM_START
-	fdb	FROM_START
 symbolic_addrs_end
 symbolic_addrs_cnt	equ	((symbolic_addrs_end - symbolic_addrs) / 2)
 
@@ -756,7 +754,11 @@ cmd_help_addrs
 	fcc	"  ROM_BANK_REG\r\n"
 	fcc	"  LBRAM_BANK_REG\r\n"
 	fcc	"  HBRAM_BANK_REG\r\n"
-	fcn	"  CLOCK_SPEED_REG\r\n"
+	fcc	"  CLOCK_SPEED_REG\r\n"
+	fcc	"  LBRAM_START\r\n"
+	fcc	"  HBRAM_START\r\n"
+	fcc	"  BROM_START\r\n"
+	fcc	0
 	jmp	monitor_main
 
 	;
