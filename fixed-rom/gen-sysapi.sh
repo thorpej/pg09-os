@@ -58,6 +58,14 @@ _EOF
 (for subr_targ in $SysSubr_list; do
 	subr_name=`grep "${subr_targ}$" "$sym_file" | cut -f 1`
 	subr_val=`grep "^SysSubr_${subr_targ}" "$sym_file" | cut -f 3`
+	#
+	# Handle some SysSubr symbol renames:
+	#
+	#	warm_boot -> exit
+	#
+	case x"$subr_name" in
+	xwarm_boot)	subr_name=exit		;;
+	esac
 	if [ x"$subr_name" != x ]; then
 		awk -v subr_targ=$subr_targ -v subr_name=$subr_name -v \
 		    subr_val=$subr_val \

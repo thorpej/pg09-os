@@ -55,6 +55,8 @@ SysSubr_\1	fdb	\1
 	;
 	org	FROM_START
 
+	SysSubr warm_boot	; gen-sysapi.sh fixes this up to SysSubr_exit
+
 	SysSubr	brom_call
 	SysSubr brom_switch
 	SysSubr	lbram_switch
@@ -92,6 +94,24 @@ pg09_hbram_probe_bad_str
 ; HBRAM bank values for the last bank of each 512K RAM chip.
 pg09_hbram_probe_tab
 	fcb	$3F, $7F, $BF, $FF
+
+warm_boot
+	;
+	; Switch back to the kernel stack.
+	;
+	lds	#KSTACK_TOP
+
+	;
+	; Re-initialize the console.
+	;
+	; XXX cons_reinit
+
+	;
+	; XXX Here is where we would re-load the shell and return
+	; XXX back to it, unless it is the thing that exited.
+	;
+
+	jmp	monitor_main		; Go into the main monitor loop!
 
 cold_boot
 	;
