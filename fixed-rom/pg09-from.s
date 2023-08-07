@@ -525,7 +525,7 @@ cmd_access_mem
 	lbvs	syntax_error	; Overflow? Syntax error.
 	bra	2F
 
-1	ldd	#1		; No length specifed -> 1 byte
+1	M_clrd			; No length specified
 2	std	mem_access_len
 
 	jsr	parsews		; gobble up the whitespace
@@ -540,7 +540,7 @@ cmd_access_mem
 	;
 	; D will still contain that length from above.
 	;
-	cmpd	#1		; D == 1?
+	cmpd	#0		; D == 0?
 	bne	cmd_access_memset ; No -> memset()
 
 	ldy	mem_access_addr	; Y = address to access
@@ -569,6 +569,10 @@ cmd_access_mem_rd
 				; for counting bytes.
 
 	ldy	mem_access_addr	; Y = address to access
+
+	ldd	mem_access_len	; If length unspecified or 1, then
+	cmpd	#1		; we have a simplier display format.
+	bls	5F
 
 1	tfr	Y,D		; Print the address.
 	andb	#$F0		; Always align start address.
@@ -606,7 +610,15 @@ cmd_access_mem_rd
 
 3	sty	mem_access_addr	; Remember where we left off.
 	jsr	puts_crlf
+	jmp	monitor_main
 
+5	tfr	Y,D		; Print the address.
+	jsr	printhex16
+	jsr	iputs
+	fcn	": "
+	lda	,Y+		; Get the byte
+	jsr	printhex8	; Print it.
+	jsr	puts_crlf
 	jmp	monitor_main
 
 ;
@@ -638,7 +650,7 @@ parse_addr
 	; First check for symbolic addresses.
 	ldy	#symbolic_addrtab
 	jsr	parsetbl_lookup
-	cmpa	#symbolic_addrtab_cnt	; A == table entry count?
+	cmpa	#symbolic_addrs_cnt ; A == table entry count?
 	beq	2F		; Yes, try parsing numbers.
 	asla			; table index -> offset
 	ldy	#symbolic_addrs	; Y = symbolic addresses table
@@ -667,8 +679,6 @@ symbolic_addrtab
 	fcc	"FROM_STAR",'T'+$80
 	fcb	0
 
-symbolic_addrtab_cnt	equ	4
-
 symbolic_addrs
 	fdb	ROM_BANK_REG
 	fdb	LBRAM_BANK_REG
@@ -679,6 +689,8 @@ symbolic_addrs
 	fdb	HBRAM_START
 	fdb	BROM_START
 	fdb	FROM_START
+symbolic_addrs_end
+symbolic_addrs_cnt	equ	((symbolic_addrs_end - symbolic_addrs) / 2)
 
 ;
 ; cmd_help
