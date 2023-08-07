@@ -93,7 +93,7 @@ pg09_hbram_probe_bad_str
 pg09_hbram_probe_tab
 	fcb	$3F, $7F, $BF, $FF
 
-fixed_rom_start
+cold_boot
 	;
 	; Initialize memory banking.
 	;
@@ -787,7 +787,7 @@ vec_swi
 vec_nmi
 	rti
 
-vec_reset	equ	fixed_rom_start
+vec_reset	equ	cold_boot
 
 	;
 	; VECTOR TABLE
