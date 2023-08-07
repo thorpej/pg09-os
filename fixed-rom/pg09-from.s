@@ -221,6 +221,7 @@ panic_bad_hbram
 	;
 	include "../lib/memzero16.s"
 	include "../lib/parsedec.s"
+	include "../lib/parsehex.s"
 	include "../lib/parsetbl.s"
 	include "../lib/parsews.s"
 	include "../lib/parseeol.s"
@@ -423,6 +424,7 @@ error
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 monitor_main
+	lds	#KSTACK_TOP		; Reset the stack pointer
 	jsr	monitor_getline		; X = command line
 	jsr	parsews			; toss leading whitespace
 	ldy	#monitor_cmdtab		; Y = command table
@@ -507,10 +509,152 @@ suggest_help
 ;	@ val [val ...]			- set bytes startint at next address
 ;
 cmd_access_mem
+	; Check for an immediate comma; that's a read (with length).
+	lda	,X
+	cmpa	#','
+	beq	cmd_access_mem_rd
+
+	; Check for whitespace -- that would indicate a write.
+	jsr	parsews
+	beq	cmd_access_mem_rd
+	jsr	parseeol	; unless it's just before EOL
+	bne	cmd_access_mem_rd
+
 	jsr	error
 	jsr	iputs
-	fcn	"@ not yet implemented\r\n"
+	fcn	"@ for write not yet implemented\r\n"
 	jmp	monitor_main
+
+cmd_access_mem_rd
+	; Check for EOL.  If so, it's just a 1 byte access.
+	jsr	parseeol
+	bne	cmd_access_mem_rd_len1
+	lda	,X		; A = *X
+	cmpa	#','		; Is it a comma?
+	beq	cmd_access_mem_rd_getlen
+	jsr	parse_addr	; D = address
+	beq	syntax_error	; Not an address? Syntax error.
+	std	mem_access_addr	; Stash the address
+	lda	,X		; A = *X
+	cmpa	#','		; Is it a comma?
+	beq	cmd_access_mem_rd_getlen
+	; Check again for EOL, if so, it's just a 1 byte access.
+	jsr	parseeol
+	lbeq	syntax_error	; Not EOL? Syntax error.
+	bra	cmd_access_mem_rd_len1
+
+cmd_access_mem_rd_getlen
+	lda	,X+		; A = *X++
+	cmpa	#','		; Is it a comma?
+	lbne	syntax_error	; No? Syntax error.
+	jsr	parsedec	; D = length
+	lbeq	syntax_error	; Not a number? Syntax error.
+	lbvs	syntax_error	; Overflow? Syntax error.
+	std	mem_access_len
+	bra	cmd_access_mem_rd_havelen
+
+cmd_access_mem_rd_len1
+	ldd	#1		; just one byte
+	std	mem_access_len
+
+cmd_access_mem_rd_havelen
+	jsr	parseeol	; Make sure we're at EOL
+	lbeq	syntax_error	; No?  Syntax error.
+
+	ldy	mem_access_addr	; Y = address to access
+	tfr	Y,D		; Print the address.
+	jsr	printhex16
+	jsr	iputs
+	fcn	": "
+
+	leas	-1,S		; Push a slot onto the stack
+				; for counting bytes.
+
+1	lda	#16		; Byte count = 8
+	sta	,S
+
+2	lda	,Y+		; A = byte being accessed
+	jsr	printhex8
+	jsr	iputs
+	fcn	" "
+
+	ldd	mem_access_len
+	subd	#1		; Subtract 1 from length
+	std	mem_access_len	; store it back
+	beq	3F		; Get out if we're done.
+
+	dec	,S		; byte count--
+	bne	2B		; just go around again if not 0
+
+	jsr	iputs		; New line and indent for the next
+	fcn	"\r\n      "	; set of bytes.
+	bra	1B
+
+3	sty	mem_access_addr	; Remember where we left off.
+	jsr	puts_crlf
+
+	jmp	monitor_main
+
+;
+; parse_addr
+;	Parse an address.  This is just a 16-bit hexadecimal number
+;	but may also be one of our symbolic address names.
+;
+; Arguments --
+;	X - pointer to buffer to be parsed
+;
+; Returns --
+;	D - value of parsed number.
+;
+;	X - Updated to point to the first non-hex character following
+;	the number.
+;
+;	CC_Z is clear if any valid digits were parsed, CC_Z set and the
+;	value in D is 0 if no valid digits were found.
+;
+;	CC_V is set if the number overflowed 16 bits.  The value
+;	$FFFF is loaded into D in that case.  If the value fits in
+;	16 bits, then CC_V is cleared.
+;
+; Clobbers --
+;	None.
+;
+parse_addr
+	pshs	Y		; Save registers
+	; First check for symbolic addresses.
+	ldy	#symbolic_addrtab
+	jsr	parsetbl_lookup
+	cmpa	#symbolic_addrtab_cnt	; A == table entry count?
+	beq	2F		; Yes, try parsing numbers.
+	asla			; table index -> offset
+	ldy	#symbolic_addrs	; Y = symbolic addresses table
+	ldd	A,Y		; D = address from table
+	andcc	#~(CC_Z|CC_V)	; clear Z to return true and clear V
+1	puls	Y,PC		; Restore and return
+
+2	; Just parse as a number.
+	jsr	parsehex16
+	beq	1B		; Z set, just get out
+	bvs	3F		; V set, we'll set Z and then get out
+	bra	1B		; Otherwise, all good, get out.
+
+3	orcc	#CC_Z		; Set Z to return false
+	bra	1B
+
+symbolic_addrtab
+	fcc	"ROM_BANK_RE",'G'+$80
+	fcc	"LBRAM_BANK_RE",'G'+$80
+	fcc	"HBRAM_BANK_RE",'G'+$80
+	fcc	"CLOCK_SPEED_RE",'G'+$80
+	fcb	0
+
+symbolic_addrtab_cnt	equ	4
+
+symbolic_addrs
+	fdb	ROM_BANK_REG
+	fdb	LBRAM_BANK_REG
+	fdb	HBRAM_BANK_REG
+	fdb	CLOCK_SPEED_REG
 
 ;
 ; cmd_help
@@ -531,10 +675,12 @@ cmd_help
 
 monitor_helptab
 	fcc	'@'+$80			; access memory
+	fcc	"ADDR",'S'+$80		; symbolic addresses
 	fcc	0
 
 monitor_helpjmptab
 	fdb	cmd_help_access_mem
+	fdb	cmd_help_addrs
 	fdb	cmd_help_generic
 
 cmd_help_generic
@@ -552,7 +698,17 @@ cmd_help_access_mem
 	fcc	"@addr,len           - print len bytes\r\n"
 	fcc	"@,len               - print len bytes at next address\r\n"
 	fcc	"@addr val [val ...] - set bytes starting at address\r\n"
-	fcn	"@ val [val ...]     - set bytes starting at next address\r\n"
+	fcc	"@ val [val ...]     - set bytes starting at next address\r\n"
+	fcn	"Use '? addrs' for a list of symbolic addresses.\r\n"
+	jmp	monitor_main
+
+cmd_help_addrs
+	jsr	iputs
+	fcc	"Available symbolic addresses:\r\n"
+	fcc	"  ROM_BANK_REG\r\n"
+	fcc	"  LBRAM_BANK_REG\r\n"
+	fcc	"  HBRAM_BANK_REG\r\n"
+	fcn	"  CLOCK_SPEED_REG\r\n"
 	jmp	monitor_main
 
 	;
