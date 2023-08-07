@@ -595,7 +595,7 @@ cmd_access_mem_rd
 2	lda	,Y+		; A = byte being accessed
 	jsr	iputs
 	fcn	" "
-3	jsr	printhex8
+	jsr	printhex8
 
 	ldd	mem_access_len
 	subd	#1		; Subtract 1 from length
