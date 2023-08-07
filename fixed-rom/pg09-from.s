@@ -533,9 +533,32 @@ cmd_access_mem
 	jsr	parseeol	; check for EOL
 	bne	cmd_access_mem_rd ; definitely a read.
 
+	;
+	; We're writing, then.  Based on the length, we're easier
+	; writing out multiple bytes as specified on the command line,
+	; or we're writing out a single byte multiple times.
+	;
+	; D will still contain that length from above.
+	;
+	cmpd	#1		; D == 1?
+	bne	cmd_access_memset ; No -> memset()
+
+	ldy	mem_access_addr	; Y = address to access
+cmd_access_mem_wr
+	jsr	parsehex8	; A = next value
+	beq	syntax_error	; Z set? Syntax error.
+	bvs	syntax_error	; V set? Syntax error.
+	sta	,Y+		; Write value, advance address
+	sty	mem_access_addr	; Update this as we go.
+	jsr	parseeol	; skip whitespace, check for EOL
+	beq	cmd_access_mem_wr ; not EOL, check for more values
+	jmp	monitor_main	; All done.
+
+cmd_access_memset
+
 	jsr	error
 	jsr	iputs
-	fcn	"@ for write not yet implemented\r\n"
+	fcn	"@ for set not yet implemented\r\n"
 	jmp	monitor_main
 
 cmd_access_mem_rd
