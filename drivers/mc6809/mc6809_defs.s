@@ -44,4 +44,44 @@ CC_H		equ	(1 << 5)	; half-carry
 CC_F		equ	(1 << 6)	; FIRQ mask
 CC_E		equ	(1 << 7)	; entire
 
+;
+; Interrupt frame offsets
+;
+; IFE_ -> Interrupt Frame Entire
+;
+;    [higest address]
+;	PC
+;	U
+;	Y
+;	X
+;	DP
+;	B
+;	A
+;	CCR
+;    [lowest address]
+;
+IFE_CCR		equ	0
+IFE_A		equ	1
+IFE_B		equ	2
+IFE_DP		equ	3
+IFE_X		equ	4
+IFE_Y		equ	6
+IFE_U		equ	8
+IFE_PC		equ	10
+IFE_SIZE	equ	(IFE_PC + 2)
+
+;
+; IFF_ -> Interrupt Frame Fast
+;
+;    [highest address]
+;
+;	PC
+;	CCR
+;
+;    [lowest address]
+;
+IFF_CCR		equ	0
+IFF_PC		equ	1
+IFF_SIZE	equ	(IFF_PC + 2)
+
 	endif	; mc6809_defs_included
