@@ -49,6 +49,10 @@ getline_buf	rmb	getline_maxcnt+1
 	export	hbram_max_bank
 hbram_max_bank	rmb	1
 
+	export	mem_access_addr,mem_access_len
+mem_access_addr	rmb	2
+mem_access_len	rmb	2
+
 ; Put the standard kernel stack at the top of FRAM.
 	export	KSTACK_TOP
 KSTACK_TOP	equ	FRAM_START+FRAM_SIZE
