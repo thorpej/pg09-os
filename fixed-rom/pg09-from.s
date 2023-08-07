@@ -683,10 +683,8 @@ symbolic_addrtab
 	fcc	"HBRAM_BANK_RE",'G'+$80
 	fcc	"CLOCK_SPEED_RE",'G'+$80
 	fcc	"LBRAM_STAR",'T'+$80
-	fcc	"FRAM_STAR",'T'+$80
 	fcc	"HBRAM_STAR",'T'+$80
 	fcc	"BROM_STAR",'T'+$80
-	fcc	"FROM_STAR",'T'+$80
 	fcb	0
 
 symbolic_addrs
