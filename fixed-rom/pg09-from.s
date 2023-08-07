@@ -745,6 +745,8 @@ cmd_help_access_mem
 	fcc	"@,len               - print len bytes at next address\r\n"
 	fcc	"@addr val [val ...] - set bytes starting at address\r\n"
 	fcc	"@ val [val ...]     - set bytes starting at next address\r\n"
+	fcc	"@addr,len val       - set len bytes at address to value\r\n"
+	fcc	"@,len val           - set len bytes at next address to value\r\n"
 	fcn	"Use '? addrs' for a list of symbolic addresses.\r\n"
 	jmp	monitor_main
 
