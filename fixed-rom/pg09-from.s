@@ -503,11 +503,13 @@ monitor_getline
 
 monitor_cmdtab
 	fcc	'@'+$80			; access memory
+	fcc	'J'+$80			; jump to address
 	fcc	'?'+$80			; help
 	fcc	0
 
 monitor_cmdjmptab
 	fdb	cmd_access_mem
+	fdb	cmd_jump
 	fdb	cmd_help
 	fdb	cmd_unknown
 
@@ -740,6 +742,23 @@ symbolic_addrs_end
 symbolic_addrs_cnt	equ	((symbolic_addrs_end - symbolic_addrs) / 2)
 
 ;
+; cmd_jump
+;	Jump to an address.  We use the interrupt frame that's at the
+;	top of the kernel stack.
+;
+cmd_jump
+	jsr	parsews			; consume whitespace
+	jsr	parse_addr		; D = the address
+	lbeq	syntax_error		; Not a number? Syntax error.
+	lbvs	syntax_error		; Overflow? Syntax error.
+	jsr	parseeol		; check for EOL
+	lbeq	syntax_error		; No? Syntax error.
+	ldx	current_iframe		; X = interrupt frame
+	std	IFE_PC,X		; Store jump address.
+	leas	,X			; S = interrupt frame
+	rti				; ...and GO!
+
+;
 ; cmd_help
 ;	Get help.
 ;
@@ -758,11 +777,13 @@ cmd_help
 
 monitor_helptab
 	fcc	'@'+$80			; access memory
+	fcc	'J'+$80			; jump to address
 	fcc	"ADDR",'S'+$80		; symbolic addresses
 	fcc	0
 
 monitor_helpjmptab
 	fdb	cmd_help_access_mem
+	fdb	cmd_help_jump
 	fdb	cmd_help_addrs
 	fdb	cmd_help_generic
 
@@ -770,6 +791,7 @@ cmd_help_generic
 	jsr	iputs
 	fcc	"Available commands:\r\n"
 	fcc	"@     - access memory\r\n"
+	fcc	"J     - jump to address\r\n"
 	fcc	"?     - help\r\n"
 	fcn	"Use '? <cmd>' for additional help.\r\n"
 	jmp	monitor_main
@@ -785,6 +807,11 @@ cmd_help_access_mem
 	fcc	"@addr,len val       - set len bytes at address to value\r\n"
 	fcc	"@,len val           - set len bytes at next address to value\r\n"
 	fcn	"Use '? addrs' for a list of symbolic addresses.\r\n"
+	jmp	monitor_main
+
+cmd_help_jump
+	jsr	iputs
+	fcn	"J addr - jump to specified address\r\n"
 	jmp	monitor_main
 
 cmd_help_addrs
