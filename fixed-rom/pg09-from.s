@@ -102,6 +102,26 @@ warm_boot
 	lds	#KSTACK_TOP
 
 	;
+	; Push the warm_boot routine onto the stack as the return address.
+	;
+	ldx	#warm_boot
+	pshs	X
+
+	;
+	; Push an empty interrupt frame onto the stack and record it
+	; as the current iframe.
+	;
+	leas	-IFE_SIZE,S
+	tfr	S,X
+	lda	#IFE_SIZE
+	jsr	memzero8
+	stx	current_iframe
+
+	; Initialize the frame's CCR.
+	lda	#(CC_E | CC_F | CC_I)
+	sta	IFF_CCR,S
+
+	;
 	; Re-initialize the console.
 	;
 	; XXX cons_reinit
@@ -230,7 +250,7 @@ cold_boot
 	ldx	#pg09_hbram_banner_tail
 	jsr	puts
 
-	jmp	monitor_main		; Go into the main monitor loop!
+	jmp	warm_boot		; Now go do a warm boot.
 
 panic_bad_hbram
 	ldx	#pg09_hbram_probe_bad_str
@@ -239,6 +259,7 @@ panic_bad_hbram
 	;
 	; Library routines
 	;
+	include "../lib/memzero8.s"
 	include "../lib/memzero16.s"
 	include "../lib/parsedec.s"
 	include "../lib/parsehex.s"

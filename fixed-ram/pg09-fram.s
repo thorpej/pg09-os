@@ -53,6 +53,13 @@ hbram_max_bank	rmb	1
 mem_access_addr	rmb	2
 mem_access_len	rmb	2
 
+;
+; current_iframe points to the current interrupt frame.  This variable
+; is maintained by the warm boot routine and the NMI and SWI* handlers.
+;
+	export	current_iframe
+current_iframe	rmb	2
+
 ; Put the standard kernel stack at the top of FRAM.
 	export	KSTACK_TOP
 KSTACK_TOP	equ	FRAM_START+FRAM_SIZE
