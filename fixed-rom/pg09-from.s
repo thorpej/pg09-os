@@ -118,7 +118,7 @@ warm_boot
 	stx	current_iframe
 
 	; Initialize the frame's CCR.
-	lda	#(CC_E | CC_F | CC_I)
+	lda	#(CC_E | CC_F)
 	sta	IFF_CCR,S
 
 	;
