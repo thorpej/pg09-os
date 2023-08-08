@@ -117,6 +117,12 @@ warm_boot
 	stx	current_iframe
 
 	;
+	; Re-initialize DP to the reset value.
+	;
+	clra
+	tfr	A,DP
+
+	;
 	; Re-initialize the console.
 	;
 	; XXX cons_reinit
