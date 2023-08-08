@@ -50,7 +50,7 @@ SysSubr_\1	fdb	\1
 		endm
 
 	;
-	; DO NOT CHANGE THE ORDER OR THE ORIGIN OF THESE STATEMENTS UNLES
+	; DO NOT CHANGE THE ORDER OR THE ORIGIN OF THESE STATEMENTS UNLESS
 	; YOU KNOW EXACTLY WHAT YOU ARE DOING!  THESE ARE PART OF THE OS ABI!
 	;
 	org	FROM_START
@@ -102,24 +102,19 @@ warm_boot
 	lds	#KSTACK_TOP
 
 	;
-	; Push the warm_boot routine onto the stack as the return address.
-	;
-	ldx	#warm_boot
-	pshs	X
-
-	;
 	; Push an empty interrupt frame onto the stack and record it
-	; as the current iframe.
+	; as the current iframe.  Make warm_boot() appear as the
+	; return address above the iframe.
 	;
-	leas	-IFE_SIZE,S
-	tfr	S,X
+	ldx	#MONITOR_IFRAME
+	ldy	#warm_boot
 	lda	#IFE_SIZE
+	sty	A,X
 	jsr	memzero8
-	stx	current_iframe
-
-	; Initialize the frame's CCR.
 	lda	#(CC_E | CC_F)
-	sta	IFF_CCR,S
+	sta	IFF_CCR,X
+
+	stx	current_iframe
 
 	;
 	; Re-initialize the console.
@@ -504,12 +499,14 @@ monitor_getline
 monitor_cmdtab
 	fcc	'@'+$80			; access memory
 	fcc	'J'+$80			; jump to address
+	fcc	'R'+$80			; print / set register
 	fcc	'?'+$80			; help
 	fcc	0
 
 monitor_cmdjmptab
 	fdb	cmd_access_mem
 	fdb	cmd_jump
+	fdb	cmd_reg
 	fdb	cmd_help
 	fdb	cmd_unknown
 
@@ -743,8 +740,7 @@ symbolic_addrs_cnt	equ	((symbolic_addrs_end - symbolic_addrs) / 2)
 
 ;
 ; cmd_jump
-;	Jump to an address.  We use the interrupt frame that's at the
-;	top of the kernel stack.
+;	Jump to an address.  We use whatever the current interrupt frame is.
 ;
 cmd_jump
 	jsr	parsews			; consume whitespace
@@ -757,6 +753,121 @@ cmd_jump
 	std	IFE_PC,X		; Store jump address.
 	leas	,X			; S = interrupt frame
 	rti				; ...and GO!
+
+;
+; cmd_reg
+;	Print or set a register.
+;
+cmd_reg
+	jsr	parseeol		; consume whitespace, check for EOL
+	bne	cmd_reg_printall	; if EOL, print all regs
+
+	lda	#1			; Push a 1 onto the stack (count)
+	pshs	A
+
+	ldy	#cmd_reg_parsetab	; Y = reg name table
+	jsr	parsetbl_lookup		; lookup the reg name
+	lbeq	syntax_error		; Not found, syntax error.
+	pshs	A			; push index onto stack
+
+	jsr	parseeol		; consume whitespace, check for EOL
+	bne	cmd_reg_printloop	; if EOL, print the one reg
+
+	jmp	monitor_main
+
+cmd_reg_printall
+	lda	#9			; push 9 onto the stack for count
+	pshs	A
+	clr	,-S			; push 0 onto the stack for index
+
+cmd_reg_printloop
+	ldy	current_iframe
+	lda	,S			; get current index
+	ldx	#cmd_reg_printnames	; X = print name table
+
+	asla				; index to pointer table offset
+	ldx	A,X			; X = print name
+	lsra				; back to index
+
+	jsr	puts			; print register name
+	jsr	iputs			; and separator
+	fcn	": "
+
+	ldx	cmd_reg_iframeoffs	; X = frame offsets
+	ldb	A,X			; B = frame offset
+
+	cmpa	#cmd_reg_iframeoffs16	; 16-bit value in frame?
+	bhs	1F			; go deal with it
+
+	lda	A,Y			; load 8-bit value from frame
+	jsr	printhex8
+	bra	2F
+
+1	ldd	A,Y			; load 16-bit value from frame
+	jsr	printhex16
+
+2	jsr	puts_crlf
+	inc	,S			; index++
+	dec	1,S			; count--
+	bne	cmd_reg_printloop	; Go around again if more to do.
+	jmp	monitor_main
+
+cmd_reg_parsetab
+	fcc	"CC",'R'+$80
+	fcc	'A'+$80
+	fcc	'B'+$80
+	fcc	'D','P'+$80
+	fcc	'D'+$80
+	fcc	'X'+$80
+	fcc	'Y'+$80
+	fcc	'U'+$80
+	fcc	'P','C'+$80
+	fcc	0
+
+cmd_reg_iframeoffs
+	fcc	IFE_CCR
+	fcc	IFE_A
+	fcc	IFE_B
+	fcc	IFE_DP
+cmd_reg_iframeoffs_D
+	fcc	IFE_A		; D
+	fcc	IFE_X
+	fcc	IFE_Y
+	fcc	IFE_U
+	fcc	IFE_PC
+
+cmd_reg_iframeoffs16	equ	(cmd_reg_iframeoffs_D - cmd_reg_iframeoffs)
+
+cmd_reg_printnames
+	fdb	reg_printname_CCR
+	fdb	reg_printname_A
+	fdb	reg_printname_B
+	fdb	reg_printname_DP
+	fdb	reg_printname_D
+	fdb	reg_printname_X
+	fdb	reg_printname_Y
+	fdb	reg_printname_U
+	fdb	reg_printname_PC
+	fdb	0
+
+reg_printname_CCR
+	fcn	"CCR"
+reg_printname_A
+	fcn	"  A"
+reg_printname_B
+	fcn	"  B"
+reg_printname_DP
+	fcn	" DP"
+reg_printname_D
+	fcn	"  D"
+reg_printname_X
+	fcn	"  X"
+reg_printname_Y
+	fcn	"  Y"
+reg_printname_U
+	fcn	"  U"
+reg_printname_PC
+	fcn	" PC"
 
 ;
 ; cmd_help
@@ -778,12 +889,16 @@ cmd_help
 monitor_helptab
 	fcc	'@'+$80			; access memory
 	fcc	'J'+$80			; jump to address
+	fcc	"REG",'S'+$80		; registers
+	fcc	'R'+$80			; print / set register
 	fcc	"ADDR",'S'+$80		; symbolic addresses
 	fcc	0
 
 monitor_helpjmptab
 	fdb	cmd_help_access_mem
 	fdb	cmd_help_jump
+	fdb	cmd_help_regs
+	fdb	cmd_help_reg
 	fdb	cmd_help_addrs
 	fdb	cmd_help_generic
 
@@ -792,6 +907,7 @@ cmd_help_generic
 	fcc	"Available commands:\r\n"
 	fcc	"@     - access memory\r\n"
 	fcc	"J     - jump to address\r\n"
+	fcc	"R     - print / set register\r\n"
 	fcc	"?     - help\r\n"
 	fcn	"Use '? <cmd>' for additional help.\r\n"
 	jmp	monitor_main
@@ -814,6 +930,14 @@ cmd_help_jump
 	fcn	"J addr - jump to specified address\r\n"
 	jmp	monitor_main
 
+cmd_help_reg
+	jsr	iputs
+	fcc	"R         - print all registers\r\n"
+	fcc	"R reg     - print single register\r\n"
+	fcc	"R reg val - set register to value\r\n"
+	fcn	"Use '? regs' for a list of registers.\r\n"
+	jmp	monitor_main
+
 cmd_help_addrs
 	jsr	iputs
 	fcc	"Available symbolic addresses:\r\n"
@@ -825,6 +949,14 @@ cmd_help_addrs
 	fcc	"  HBRAM_START\r\n"
 	fcc	"  BROM_START\r\n"
 	fcc	0
+	jmp	monitor_main
+
+cmd_help_regs
+	jsr	iputs
+	fcc	"8-bit registers:\r\n"
+	fcc	"  A B CCR DP\r\n\r\n"
+	fcc	"16-bit registers:\r\n"
+	fcn	"  D X Y U PC\r\n"
 	jmp	monitor_main
 
 	;

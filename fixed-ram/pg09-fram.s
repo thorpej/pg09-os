@@ -29,6 +29,7 @@
 ;
 
 	include "../../pg09-system/asm/pg09_defs.s"
+	include "../drivers/mc6809/mc6809_defs.s"
 
 	org	FRAM_START
 
@@ -60,6 +61,12 @@ mem_access_len	rmb	2
 	export	current_iframe
 current_iframe	rmb	2
 
-; Put the standard kernel stack at the top of FRAM.
+; Put the monitor's interrupt frame at the top of FRAM.  This
+; interrupt frame has an extra 2 bytes at the top that point
+; to warm_boot() (as a return address).
+	export	MONITOR_IFRAME
+MONITOR_IFRAME	equ	((FRAM_START+FRAM_SIZE)-(IFE_SIZE+2))
+
+; Put the standard kernel stack just below the monitor iframe.
 	export	KSTACK_TOP
-KSTACK_TOP	equ	FRAM_START+FRAM_SIZE
+KSTACK_TOP	equ	MONITOR_IFRAME
