@@ -52,15 +52,19 @@ cons_getline
 	; Get a character from the console.
 1	bsr	cons_getc
 
-	; If we got BS ($08) or DEL ($7F), then backspace-and-erase.
-	cmpa	#$08
-	beq	8F
-	cmpa	#$7F
-	beq	8F
+	; If we got BS or DEL, then backspace-and-erase.
+	cmpa	#ASCII_BS
+	beq	9F
+	cmpa	#ASCII_DEL
+	beq	9F
+
+	; If we got a CTRL-U, then erase to the beginning of the line.
+	cmpa	#ASCII_NAK
+	beq	10F
 
 	; If we got CR ($0D), then echo out CR+LF, and the line is done.
-	cmpa	#$0D
-	beq	9F
+	cmpa	#ASCII_CR
+	beq	8F
 
 	; Check to see if we are at the character limit.  We drop the
 	; character if so.
@@ -75,21 +79,7 @@ cons_getline
 	bsr	cons_putc
 	bra	1B		; ...and go get another one.
 
-8	; If we're already at the beginning of the line, just go
-	; around again.
-	tst	getline_cnt
-	beq	1B
-	; Decrement the byte count, scoot back our index register,
-	; and erase the character on the line.
-	dec	getline_cnt
-	leau	-1,U
-	pshs	X
-	leax	cons_getline_bs_str,PCR
-	lbsr	puts
-	puls	X
-	bra	1B
-
-9	; Line is done.  Emit a CR+LF, get the character count into A,
+8	; Line is done.  Emit a CR+LF, get the character count into A,
 	; and return.
 	clr	,U		; NUL-terminate the string
 	lbsr	puts_crlf
@@ -97,5 +87,25 @@ cons_getline
 	ldu	#getline_buf	; Return line buffer in U.
 	puls	B,PC		; Restore and return.
 
-cons_getline_bs_str
-	fcb	$08,$20,$08,$00
+9	lda	#1		; Deleting 1 character
+	pshs	A
+	bra	11F
+
+10	lda	getline_cnt	; Deleting all characters
+	pshs	A
+
+11	; If we're already at the beginning of the line, just go
+	; around again.
+	tst	getline_cnt
+	beq	12F
+	; Decrement the byte count, scoot back our index register,
+	; and erase the character on the line.
+	dec	getline_cnt
+	leau	-1,U
+	lbsr	iputs
+	fcb	ASCII_BS,ASCII_SPACE,ASCII_BS,0
+	dec	,S		; decrement delete count
+	bne	11B		; Keep going if there's more to do.
+12
+	leas	1,S		; pop the delete count slot
+	bra	1B
