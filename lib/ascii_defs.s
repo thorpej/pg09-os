@@ -65,3 +65,4 @@ ASCII_US	equ	$1f		; CTRL-_ -- Unit Separator
 ASCII_SPACE	equ	$20
 ASCII_SQUOTE	equ	$27
 ASCII_DQUOTE	equ	$22
+ASCII_DEL	equ	$7f		; Delete
