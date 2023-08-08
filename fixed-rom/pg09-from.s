@@ -107,13 +107,14 @@ warm_boot
 	; return address above the iframe.
 	;
 	ldx	#MONITOR_IFRAME
-	ldy	#warm_boot
 	lda	#IFE_SIZE
-	sty	A,X
 	jsr	memzero8
 	lda	#(CC_E | CC_F)
 	sta	IFF_CCR,X
 
+warmer_boot
+	ldy	#warm_boot
+	sty	IFE_SIZE,X
 	stx	current_iframe
 
 	;
@@ -133,6 +134,20 @@ warm_boot
 	;
 
 	jmp	monitor_main		; Go into the main monitor loop!
+
+call_ret
+	;
+	; Push the current set of registers onto the stack so we can
+	; preserve them in the monitor iframe.  Then move those register
+	; values into the monitor iframe location.
+	;
+	; Use LEAS because it does not affect the CC register.  But to
+	; do that, we also need to use PC-relative indexed addressing.
+	;
+	leas	MONITOR_IFRAME+IFE_SIZE,PCR
+	pshs	CC,A,B,DP,X,Y,U,PC
+	ldx	#MONITOR_IFRAME
+	bra	warmer_boot		; go finish warm-booting
 
 cold_boot
 	;
@@ -757,6 +772,8 @@ cmd_jump
 	lbeq	syntax_error		; No? Syntax error.
 	ldx	current_iframe		; X = interrupt frame
 	std	IFE_PC,X		; Store jump address.
+	ldd	#call_ret		; return address slot = call_ret
+	std	IFE_SIZE,X
 	leas	,X			; S = interrupt frame
 	rti				; ...and GO!
 
