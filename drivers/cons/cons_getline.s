@@ -49,37 +49,43 @@ cons_getline
 	clr	getline_cnt
 	ldu	#getline_buf
 
+cons_getline_continue
 	; Get a character from the console.
-1	bsr	cons_getc
+	bsr	cons_getc
 
 	; If we got BS or DEL, then backspace-and-erase.
 	cmpa	#ASCII_BS
-	beq	9F
+	beq	cons_getline_bs
 	cmpa	#ASCII_DEL
-	beq	9F
+	beq	cons_getline_bs
 
 	; If we got a CTRL-U, then erase to the beginning of the line.
 	cmpa	#ASCII_NAK
-	beq	10F
+	beq	cons_getline_nak
+
+	; If we get a CTRL-C, then visibly abort the line.
+	cmpa	#ASCII_ETX
+	beq	cons_getline_etx
 
 	; If we got CR ($0D), then echo out CR+LF, and the line is done.
 	cmpa	#ASCII_CR
-	beq	8F
+	beq	cons_getline_done
 
 	; Check to see if we are at the character limit.  We drop the
 	; character if so.
 	ldb	getline_cnt
 	cmpb	#getline_maxcnt
-	beq	1B		; Yup, just drop it.
+	beq	cons_getline_continue ; Yup, just drop it.
 
 	; Ok, we can store the character in the line buffer and echo
 	; it back.
 	sta	,U+
 	inc	getline_cnt
 	bsr	cons_putc
-	bra	1B		; ...and go get another one.
+	bra	cons_getline_continue ; ...and go get another one.
 
-8	; Line is done.  Emit a CR+LF, get the character count into A,
+cons_getline_done
+	; Line is done.  Emit a CR+LF, get the character count into A,
 	; and return.
 	clr	,U		; NUL-terminate the string
 	lbsr	puts_crlf
@@ -87,17 +93,19 @@ cons_getline
 	ldu	#getline_buf	; Return line buffer in U.
 	puls	B,PC		; Restore and return.
 
-9	lda	#1		; Deleting 1 character
+cons_getline_bs
+	lda	#1		; Deleting 1 character
 	pshs	A
-	bra	11F
+	bra	1F
 
-10	lda	getline_cnt	; Deleting all characters
+cons_getline_nak
+	lda	getline_cnt	; Deleting all characters
 	pshs	A
 
-11	; If we're already at the beginning of the line, just go
+1	; If we're already at the beginning of the line, just go
 	; around again.
 	tst	getline_cnt
-	beq	12F
+	beq	2F
 	; Decrement the byte count, scoot back our index register,
 	; and erase the character on the line.
 	dec	getline_cnt
@@ -105,7 +113,14 @@ cons_getline
 	lbsr	iputs
 	fcb	ASCII_BS,ASCII_SPACE,ASCII_BS,0
 	dec	,S		; decrement delete count
-	bne	11B		; Keep going if there's more to do.
-12
+	bne	1B		; Keep going if there's more to do.
+2
 	leas	1,S		; pop the delete count slot
-	bra	1B
+	bra	cons_getline_continue
+
+cons_getline_etx
+	clr	getline_cnt	; Clear out the line buffer.
+	ldu	#getline_buf
+	jsr	iputs
+	fcn	"^C"
+	bra	cons_getline_done
