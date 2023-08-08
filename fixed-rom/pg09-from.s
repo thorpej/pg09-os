@@ -773,6 +773,31 @@ cmd_reg
 	jsr	parseeol		; consume whitespace, check for EOL
 	bne	cmd_reg_printloop	; if EOL, print the one reg
 
+	jsr	parsehex16		; D = new value
+	lbeq	syntax_error		; Not number, syntax error.
+	lbvs	syntax_error		; Overflow, syntax error.
+	pshs	D			; squirrel it away on the stack
+	jsr	parseeol		; make sure we're at EOL now.
+	lbeq	syntax_error		; No, syntax error.
+
+	ldy	current_iframe
+	ldx	#cmd_reg_iframeoffs	; X = frame offset table
+	ldb	2,S			; B = index
+	ldb	B,X			; B = frame offset
+	leay	B,Y			; Y += register offset in iframe
+
+	ldb	2,S			; B = index (again)
+	cmpb	#cmd_reg_iframeoffs16	; Does index say "16-bit value"?
+	bhs	1F			; Go deal with it.
+
+	tsta				; Did we overflow 8 bits?
+	lbne	syntax_error		; Yes, syntax error.
+	ldb	1,S			; B = value
+	stb	,Y			; store the value in the iframe.
+	jmp	monitor_main
+
+1	ldd	,S			; D = value
+	std	,Y			; store the value in the iframe
 	jmp	monitor_main
 
 cmd_reg_printall
@@ -793,17 +818,18 @@ cmd_reg_printloop
 	jsr	iputs			; and separator
 	fcn	": "
 
-	ldx	cmd_reg_iframeoffs	; X = frame offsets
+	ldx	#cmd_reg_iframeoffs	; X = frame offsets
 	ldb	A,X			; B = frame offset
+	leay	B,Y			; Y += offset into iframe
 
 	cmpa	#cmd_reg_iframeoffs16	; 16-bit value in frame?
 	bhs	1F			; go deal with it
 
-	lda	A,Y			; load 8-bit value from frame
+	lda	,Y			; load 8-bit value from frame
 	jsr	printhex8
 	bra	2F
 
-1	ldd	A,Y			; load 16-bit value from frame
+1	ldd	,Y			; load 16-bit value from frame
 	jsr	printhex16
 
 2	jsr	puts_crlf
