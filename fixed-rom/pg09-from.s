@@ -1137,8 +1137,14 @@ s19_error_abort		equ	2	; s19_load aborted
 ; Clobbers --
 ;	Amazingly, none.
 ;
+; Notes --
+;	We jump around to handle errors, so Y is used to preserve
+;	our "at rest" stack pointer so it can be restored in the
+;	error recovery path.
+;
 s19_load
-	pshs	A,B,X		; Save registers.
+	pshs	A,B,X,Y		; Save registers.
+	tfr	S,Y		; Save our stack pointer in Y
 	tfr	U,X		; zero out the context
 	lda	#s19ctx_getc	; (except for s19ctx_getc at the end)
 	lbsr	memzero8
@@ -1147,6 +1153,7 @@ s19_load
 	; s19_load_done below.
 	;
 s19_get_record
+	tfr	Y,S		; Restore stack pointer
 	lbsr	s19_getc	; wait for the start-of-record
 	cmpa	#'S'
 	bne	s19_get_record	; nope, still waiting
@@ -1179,9 +1186,9 @@ s19_get_record
 s19_get_s1
 	ldx	s19ctx_addr,U	; X = destination address
 1	bsr	s19_get_byte	; get payload byte
-	dec	s19ctx_len,U	; length--
+	tst	s19ctx_len,U	; check length
 	beq	1F		; 0 -> we just loaded the checksum byte
-	ldb	s19ctx_error,U	; B = error indicator
+	tst	s19ctx_error,U	; check for error
 	bne	1B		; don't store data if there's been an error
 	sta	,X+		; store it in the destination buffer
 	bra	1B		; go back around for more
@@ -1198,14 +1205,15 @@ s19_get_s9
 	; then we're done.
 	;
 1	bsr	s19_get_byte	; get payload byte
-	dec	s19ctx_len,U	; length--
+	tst	s19ctx_len,U	; check length
 	bne	1B		; keep looping until we get to 0
 	bsr	s19_check_sum	; CC_Z is set if checksum is OK
 	beq	s19_load_done	; Ta-da!
 	lda	#s19_error_data	; Boo, error.
 	sta	s19ctx_error,U
 s19_load_done
-	puls	A,B,X,PC	; Restore and return
+	tfr	Y,S		; Restore stack pointer
+	puls	A,B,X,Y,PC	; Restore and return
 
 s19_check_sum
 	lda	s19ctx_sum,U	; A = sum
@@ -1223,7 +1231,7 @@ s19_abort
 	bra	s19_load_done
 
 s19_get_byte
-	clr	,S+		; make a spot for the result
+	clr	,-S		; make a spot for the result
 	bsr	s19_get_nybble	; get the first nybble
 	asla
 	asla
@@ -1235,6 +1243,7 @@ s19_get_byte
 	sta	,S		; save it off
 	adda	s19ctx_sum,U	; add to running sum
 	sta	s19ctx_sum,U
+	dec	s19ctx_len,U	; length--
 	puls	A,PC		; get result and and return
 
 s19_get_nybble
@@ -1245,7 +1254,7 @@ s19_get_nybble
 	suba	#('A'-('9'+1))	; adjust for A-F
 	cmpa	#$F		; if it's <= $F, we're done.
 	bls	1F
-	bra	s19_error	; otherwise it's an error.
+	bra	s19_error
 1	rts
 
 ;
