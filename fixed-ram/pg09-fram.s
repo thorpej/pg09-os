@@ -54,6 +54,9 @@ hbram_max_bank	rmb	1
 mem_access_addr	rmb	2
 mem_access_len	rmb	2
 
+	export	jump_addr
+jump_addr	rmb	2
+
 ;
 ; current_iframe points to the current interrupt frame.  This variable
 ; is maintained by the warm boot routine and the NMI and SWI* handlers.

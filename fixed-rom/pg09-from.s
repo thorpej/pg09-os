@@ -103,6 +103,12 @@ warm_boot
 	lds	#KSTACK_TOP
 
 	;
+	; Invalidate the jump address.
+	;
+	ldd	#$FFFF
+	std	jump_addr
+
+	;
 	; Push an empty interrupt frame onto the stack and record it
 	; as the current iframe.  Make warm_boot() appear as the
 	; return address above the iframe.
@@ -765,18 +771,28 @@ symbolic_addrs_cnt	equ	((symbolic_addrs_end - symbolic_addrs) / 2)
 ;	Jump to an address.  We use whatever the current interrupt frame is.
 ;
 cmd_jump
-	jsr	parsews			; consume whitespace
+	jsr	parseeol		; consume whitespace, check for EOL
+	bne	2F			; EOL -> check for valid jump_addr
 	jsr	parse_addr		; D = the address
 	lbeq	syntax_error		; Not a number? Syntax error.
 	lbvs	syntax_error		; Overflow? Syntax error.
 	jsr	parseeol		; check for EOL
 	lbeq	syntax_error		; No? Syntax error.
-	ldx	current_iframe		; X = interrupt frame
+1	ldx	current_iframe		; X = interrupt frame
 	std	IFE_PC,X		; Store jump address.
 	ldd	#call_ret		; return address slot = call_ret
 	std	IFE_SIZE,X
 	leas	,X			; S = interrupt frame
 	rti				; ...and GO!
+
+2	ldd	jump_addr		; Get jump address
+	cmpd	#$FFFF			; Address valid?
+	bne	1B			; Yes, go use it.
+
+	jsr	error
+	jsr	iputs
+	fcn	"no valid jump address.\r\n"
+	jmp	monitor_main
 
 ;
 ; cmd_reg
@@ -977,6 +993,7 @@ cmd_help_access_mem
 
 cmd_help_jump
 	jsr	iputs
+	fcc	"J      - jump to entry point of loaded program\r\n"
 	fcn	"J addr - jump to specified address\r\n"
 	jmp	monitor_main
 
