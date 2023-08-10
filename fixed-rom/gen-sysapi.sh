@@ -38,6 +38,8 @@ cat << _EOF > "$tmp_file"
 _EOF
 
 SysSubr_list=`grep "^SysSubr_5" "$sym_file" | cut -f 1 | cut -d _ -f 2`
+SysAddr_list=`grep "^SysAddr_" "$sym_file" | cut -f 1 | grep -v _size`
+SysAddr_size_list=`grep "^SysAddr_" "$sym_file" | cut -f 1 | grep _size`
 
 cat << _EOF >> "$tmp_file"
 
@@ -76,6 +78,21 @@ _EOF
 				}
 			 }' "$sym_file"
 	fi
+done) | sort >> "$tmp_file"
+
+cat << _EOF >> "$tmp_file"
+
+;
+; System Addresses.  These are the region addresses (and corresponding
+; region sizes) that are exported to programs.  All other address regions
+; should be considered reserved to the operating system.
+;
+_EOF
+(for addr_name in $SysAddr_list; do
+	addr_val=`grep "^${addr_name}" "$sym_file" | grep -v _size | cut -f 3`
+	size_val=`grep "^${addr_name}" "$sym_file" | grep _size | cut -f 3`
+	echo "${addr_name} equ ${addr_val}"
+	echo "${addr_name}_size equ ${size_val}"
 done) | sort >> "$tmp_file"
 
 cat << _EOF >> "$tmp_file"

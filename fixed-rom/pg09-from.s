@@ -68,6 +68,22 @@ SysSubr_\1	fdb	\1
 	SysSubr cons_putc
 	SysSubr cons_getline
 
+	;
+	; System ADDRESS equates.  These are the exported names of
+	; important system addresses that programs might need to
+	; care about.
+	;
+	; Programs should not care about Fixed RAM (reserved for
+	; the operating system), nor should they care about Fixed
+	; ROM (only use the exported jump table slot addresses).
+	;
+SysAddr_LowBankedRAM		set	LBRAM_START
+SysAddr_LowBankedRAM_size	set	LBRAM_SIZE
+SysAddr_HighBankedRAM		set	HBRAM_START
+SysAddr_HighBankedRAM_size	set	HBRAM_SIZE
+SysAddr_BankedROM		set	BROM_START
+SysAddr_BankedROM_size		set	BROM_SIZE
+
 pg09os_hello
 	fcc	"@thorpej's 6809 Playground OS, version "
 	fcc	"0.1"		; Change version number here!

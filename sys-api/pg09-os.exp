@@ -49,4 +49,16 @@ SysSubr_exit equ 57344
 SysSubr_hbram_switch equ 57352
 SysSubr_lbram_switch equ 57350
 
+;
+; System Addresses.  These are the region addresses (and corresponding
+; region sizes) that are exported to programs.  All other address regions
+; should be considered reserved to the operating system.
+;
+SysAddr_BankedROM equ 49152
+SysAddr_BankedROM_size equ 8192
+SysAddr_HighBankedRAM equ 40960
+SysAddr_HighBankedRAM_size equ 8192
+SysAddr_LowBankedRAM equ 0
+SysAddr_LowBankedRAM_size equ 32768
+
 	endif	; pg09_os_exp_included
