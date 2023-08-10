@@ -970,9 +970,7 @@ cmd_loads
 	jsr	iputs
 	fcn	"Waiting for S-Records...\r\n"
 	jsr	s19_load		; Go load them!
-
-	lda	s19ctx_error,U		; Check for error.
-	bne	1F			; Go handle it.
+	bne	1F			; Go handle any error.
 
 	jsr	iputs
 	fcn	"Read "
@@ -994,7 +992,8 @@ cmd_loads
 	jsr	puts_crlf
 	jmp	monitor_main
 
-1	cmpa	#s19_error_data
+1	lda	s19ctx_error,U		; Get the error code
+	cmpa	#s19_error_data
 	beq	2F
 	cmpa	#s19_error_abort
 	beq	3F
@@ -1214,13 +1213,13 @@ s19_get_record
 	sta	s19ctx_addr+1,U
 
 	lda	s19ctx_rectype,U ; check record type
-	cmpa	#'1'		; S1 (data, 16-bit address)
-	beq	s19_get_s1
 	cmpa	#'9'		; S9 (termination, 16-bit start address)
 	beq	s19_get_s9
-	bra	s19_get_record	; ignore all other kinds
-
-s19_get_s1
+	;
+	; We are guaranteed above that it's only going to be an S1 or S9
+	; record, so we can just fall into S1 handling (which will be the
+	; common case).
+	;
 	ldx	s19ctx_addr,U	; X = destination address
 1	bsr	s19_get_byte	; get payload byte
 	tst	s19ctx_len,U	; check length
@@ -1250,6 +1249,7 @@ s19_get_s9
 	sta	s19ctx_error,U
 s19_load_done
 	tfr	Y,S		; Restore stack pointer
+	tst	s19ctx_error,U	; Set Z if no error.
 	puls	A,B,X,Y,PC	; Restore and return
 
 s19_check_sum
