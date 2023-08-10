@@ -973,6 +973,18 @@ cmd_loads
 
 	lda	s19ctx_error,U		; Check for error.
 	bne	1F			; Go handle it.
+
+	jsr	iputs
+	fcn	"Read "
+	ldd	s19ctx_nrecs,U	; Print record counts
+	jsr	printdec16
+	jsr	iputs
+	fcn	" records ("
+	ldd	s19ctx_ignrecs,U
+	jsr	printdec16
+	jsr	iputs
+	fcn	" ignored)\r\n"
+
 	ldd	s19ctx_addr,U		; Get the entry point
 	std	jump_addr		; ...and make it jump'able.
 
@@ -1116,6 +1128,8 @@ cmd_help_regs
 ;    [higher address]
 ;
 ;	u16	get-character routine
+;	u16	ignored count
+;	u16	record count
 ;	u16	address
 ;	u8	payload length
 ;	u8	payload sum
@@ -1131,7 +1145,9 @@ s19ctx_rectype		equ	(s19ctx_error + 1)
 s19ctx_sum		equ	(s19ctx_rectype + 1)
 s19ctx_len		equ	(s19ctx_sum + 1)
 s19ctx_addr		equ	(s19ctx_len + 1)
-s19ctx_getc		equ	(s19ctx_addr + 2)
+s19ctx_nrecs		equ	(s19ctx_addr + 2)
+s19ctx_ignrecs		equ	(s19ctx_nrecs + 2)
+s19ctx_getc		equ	(s19ctx_ignrecs + 2)
 s19ctx_ctxsize		equ	(s19ctx_getc + 2)
 
 s19_error_none		equ	0	; no error
@@ -1172,11 +1188,17 @@ s19_get_record
 	lbsr	s19_getc	; wait for the start-of-record
 	cmpa	#'S'
 	bne	s19_get_record	; nope, still waiting
+	ldd	s19ctx_nrecs,U ; increment record count
+	addd	#1
+	std	s19ctx_nrecs,U
 	lbsr	s19_getc	; now get the type
 	cmpa	#'1'		; Check for supported record types
 	beq	1F
 	cmpa	#'9'
 	beq	1F
+	ldd	s19ctx_ignrecs,U ; increment ignored record count
+	addd	#1
+	std	s19ctx_ignrecs,U
 	bra	s19_get_record	; wait for the next record
 
 1	sta	s19ctx_rectype,U ; stash the record type
