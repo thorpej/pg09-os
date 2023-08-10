@@ -777,7 +777,6 @@ cmd_jump
 	bne	2F			; EOL -> check for valid jump_addr
 	jsr	parse_addr		; D = the address
 	lbeq	syntax_error		; Not a number? Syntax error.
-	lbvs	syntax_error		; Overflow? Syntax error.
 	jsr	parseeol		; check for EOL
 	lbeq	syntax_error		; No? Syntax error.
 1	ldx	current_iframe		; X = interrupt frame
