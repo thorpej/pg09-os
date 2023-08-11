@@ -51,12 +51,14 @@ _EOF
 	bcall_name=`grep "${bcall_targ}$" "$sym_file" | cut -f 1`
 	bcall_val=`grep "^BCall_${subr_targ}" "$sym_file" | cut -f 3`
 	if [ x"$bcall_name" != x ]; then
-		awk -v bcall_targ=$bcall_targ -v bcall_name=$bcall_name -v \
-		    bcall_val=$bcall_val \
+		awk -v bcall_targ=$bcall_targ -v bcall_name=$bcall_name \
+		    -v bcall_val=$bcall_val -v bankno=$bankno \
 			'{
 				if ($1 == "BCall_" bcall_targ) {
-					printf("BCall_%s equ %s\n",
+					printf("BCall_%s_slot equ %s\n",
 					    bcall_name, bcall_val)
+					printf("BCall_%s_bank equ %s\n",
+					    bcall_name, bankno)
 				}
 			 }' "$sym_file"
 	fi

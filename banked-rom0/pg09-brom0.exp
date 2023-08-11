@@ -30,6 +30,7 @@
 	else
 pg09_brom0_exp_included	equ	1
 
-BCall_cmd_oink equ 49152
+BCall_cmd_oink_bank equ 0
+BCall_cmd_oink_slot equ 49152
 
 	endif	; pg09_brom0_exp_included
