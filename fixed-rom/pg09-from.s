@@ -407,8 +407,8 @@ hbram_switch
 ;	Y - pointer to banked call descriptor.  A banked call descriptor
 ;	is a 3 byte datum that has the format:
 ;
-;		2,Y	bank number
-;		0,Y	system address of routine jump table entry
+;		1,Y	system address of routine jump table entry
+;		0,Y	bank number
 ;
 ;	N.B. this similar to what is pushed onto the stack during
 ;	a banked call, but is not the same.  The reason for mandating
@@ -436,8 +436,8 @@ brom_call
 	; 1,S		saved Y (msb)
 	; 0,S		saved A
 	;
-	lda	2,Y		; A = target bank #
-	ldy	,Y		; Y = address of jump table slot
+	lda	,Y		; A = target bank #
+	ldy	1,Y		; Y = address of jump table slot
 	bsr	brom_switch	; Switch banks.
 	pshs	A		; Save previous bank.
 	;
@@ -1118,8 +1118,8 @@ cmd_help_regs
 	jmp	monitor_main
 
 BCall_cmd_oink_desc
-	fdb	BCall_cmd_oink_slot
 	fcc	BCall_cmd_oink_bank
+	fdb	BCall_cmd_oink_slot
 
 cmd_oink
 	ldy	#BCall_cmd_oink_desc
