@@ -546,6 +546,7 @@ monitor_cmdtab
 	fcc	'R'+$80			; print / set register
 	fcc	"LOAD",'S'+$80		; load S-Records
 	fcc	'?'+$80			; help
+	fcc	"OIN",'K'+$80		; not "moo".
 	fcc	0
 
 monitor_cmdjmptab
@@ -554,6 +555,7 @@ monitor_cmdjmptab
 	fdb	cmd_reg
 	fdb	cmd_loads
 	fdb	cmd_help
+	fdb	cmd_oink
 	fdb	cmd_unknown
 
 ;
@@ -1113,6 +1115,16 @@ cmd_help_regs
 	fcc	"16-bit registers:\r\n"
 	fcn	"  D X Y U PC\r\n"
 	jmp	monitor_main
+
+cmd_oink_bcall
+	fdb	BROM_START+0
+	fcc	0
+
+cmd_oink
+	ldy	#cmd_oink_bcall
+	jsr	brom_call
+	jmp	monitor_main
+
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;

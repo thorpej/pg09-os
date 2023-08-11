@@ -1,5 +1,5 @@
 ;
-; Copyright (c) 2022, 2023 Jason R. Thorpe.
+; Copyright (c) 2023 Jason R. Thorpe.
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without
@@ -25,42 +25,43 @@
 ;
 
 ;
-; General assembly macros
+; ROM Bank 0 image for the 6809 Playground.
 ;
 
-;
-; Generate a Banked Call jump table entry.  These entries will then
-; be used by gen-bcalls.sh to generate the Banked Call Descriptors
-; that can be used by consumers of the banked call routine.
-;
-BCall		macro
-BCall_\1	fdb     \1
-		endm
+	include "../../pg09-system/asm/pg09_defs.s"
+	include "../drivers/mc6809/mc6809_defs.s"
+	include "../lib/asm_macros.inc"
+
+	include "../fixed-ram/pg09-fram.exp"
+
+	include "../sys-api/pg09-os.exp"
+
+	setdp	-1	; Disable automatic direct page addressing
+
+	org	BROM_START
 
 ;
-; Macros for some 6309 instructions that we can emulate on the 6809
-; with multi-instruction sequences.
+; Banked call jump table.  The order of this table defines the ABI
+; of the module in this ROM bank.
 ;
-	if	CONFIG_6309
+	BCall cmd_oink
 
-M_asld		macro
-		asld
-		endm
+;
+; Code goes here.
+;
 
-M_clrd		macro
-		clrd
-		endm
+	include	"../lib/puts.s"
 
-	else	; 6809
+;
+; cmd_oink
+;	The dumbest little easter egg.
+;
+cmd_oink
+	jsr	iputs
+	fcc	"^. .^\r\n"
+	fcc	"( @ )\r\n"
+	fcn	"OINK!\r\n"
+	rts
 
-M_asld		macro
-		aslb
-		rola
-		endm
-
-M_clrd		macro
-		clra		; Could use LDD #0, but that's 1 byte
-		clrb		; longer despite being 1 cycle faster
-		endm
-
-	endif	; CONFIG_6309
+	org	BROM_START+BROM_SIZE-1
+	nop
