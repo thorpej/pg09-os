@@ -46,9 +46,9 @@
 ; of the module in this ROM bank.
 ;
 	BCall_decl cmd_reg
+	BCall_decl cmd_loads
 	BCall_decl cmd_help
 	BCall_decl cmd_oink
-	BCall_decl s19_load
 
 ;
 ; Code goes here.
@@ -59,12 +59,11 @@
 	include "../lib/parsehex.s"
 	include "../lib/parsews.s"
 	include "../lib/parsetbl.s"
+	include "../lib/printdec.s"
 	include "../lib/printhex.s"
 	include	"../lib/puts.s"
 	include "../lib/toupper.s"
-
-	include "../lib/s19-loader.exp"
-	include "../lib/s19-loader.s"
+	include "../lib/udiv16.s"
 
 error
 	jsr	iputs
@@ -239,6 +238,71 @@ reg_printname_U
 	fcn	"  U"
 reg_printname_PC
 	fcn	" PC"
+
+;
+; cmd_loads
+;	Load S-Records.
+;
+cmd_loads
+	; Push a s19ctx onto the stack.
+	leas	-s19ctx_ctxsize,S
+	tfr	S,U			; U = s19ctx
+	ldx	SysSubr_cons_getc	; X = cons_getc
+	stx	s19ctx_getc,U		; set the s19 getc routine
+
+	; Make sure the jump_addr is invalid in case the load fails.
+	ldd	#$FFFF
+	std	jump_addr
+
+	jsr	iputs
+	fcn	"Waiting for S-Records...\r\n"
+	lbsr	s19_load		; Go load them!
+	bne	1F			; Go handle any error.
+
+	jsr	iputs
+	fcn	"Read "
+	ldd	s19ctx_nrecs,U		; Print record counts
+	jsr	printdec16
+	jsr	iputs
+	fcn	" records ("
+	ldd	s19ctx_ignrecs,U
+	jsr	printdec16
+	jsr	iputs
+	fcn	" ignored)\r\n"
+
+	ldd	s19ctx_addr,U		; Get the entry point
+	std	jump_addr		; ...and make it jump'able.
+
+	jsr	iputs
+	fcn	"Entry point: "
+	jsr	printhex16
+	jsr	puts_crlf
+	bra	4F
+
+1	lda	s19ctx_error,U		; Get the error code
+	cmpa	#s19_error_data
+	beq	2F
+	cmpa	#s19_error_abort
+	beq	3F
+
+	jsr	error
+	jsr	iputs
+	fcn	"unknown error\r\n"
+	bra	4F
+
+2	jsr	error
+	jsr	iputs
+	fcn	"S-Record data error\r\n"
+	bra	4F
+
+3	jsr	iputs
+	fcn	"S-Record load aborted.\r\n"
+
+4	leas	s19ctx_ctxsize,S	; pop context off stack.
+	rts
+
+	include "../lib/s19-loader.exp"
+	include "../lib/s19-loader.s"
 
 ;
 ; cmd_help

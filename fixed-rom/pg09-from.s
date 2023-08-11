@@ -834,62 +834,9 @@ cmd_reg
 ; cmd_loads
 ;	Load S-Records.
 ;
-	include	"../lib/s19-loader.exp"
-	BCall_desc "s19_load"
+	BCall_desc "cmd_loads"
 cmd_loads
-	; Push a s19ctx onto the stack.
-	leas	-s19ctx_ctxsize,S
-	tfr	S,U			; U = s19ctx
-	ldx	#cons_getc		; X = cons_getc
-	stx	s19ctx_getc,U		; set the s19 getc routine
-
-	; Make sure the jump_addr is invalid in case the load fails.
-	ldd	#$FFFF
-	std	jump_addr
-
-	jsr	iputs
-	fcn	"Waiting for S-Records...\r\n"
-	BCall	"s19_load"		; Go load them!
-	bne	1F			; Go handle any error.
-
-	jsr	iputs
-	fcn	"Read "
-	ldd	s19ctx_nrecs,U		; Print record counts
-	jsr	printdec16
-	jsr	iputs
-	fcn	" records ("
-	ldd	s19ctx_ignrecs,U
-	jsr	printdec16
-	jsr	iputs
-	fcn	" ignored)\r\n"
-
-	ldd	s19ctx_addr,U		; Get the entry point
-	std	jump_addr		; ...and make it jump'able.
-
-	jsr	iputs
-	fcn	"Entry point: "
-	jsr	printhex16
-	jsr	puts_crlf
-	jmp	monitor_main
-
-1	lda	s19ctx_error,U		; Get the error code
-	cmpa	#s19_error_data
-	beq	2F
-	cmpa	#s19_error_abort
-	beq	3F
-
-	jsr	error
-	jsr	iputs
-	fcn	"unknown error\r\n"
-	jmp	monitor_main
-
-2	jsr	error
-	jsr	iputs
-	fcn	"S-Record data error\r\n"
-	jmp	monitor_main
-
-3	jsr	iputs
-	fcn	"S-Record load aborted.\r\n"
+	BCall	"cmd_loads"
 	jmp	monitor_main
 
 ;
