@@ -45,9 +45,9 @@
 ; Banked call jump table.  The order of this table defines the ABI
 ; of the module in this ROM bank.
 ;
-	BCall cmd_help
-	BCall cmd_oink
-	BCall s19_load
+	BCall_decl cmd_help
+	BCall_decl cmd_oink
+	BCall_decl s19_load
 
 ;
 ; Code goes here.

@@ -960,9 +960,7 @@ reg_printname_PC
 ;	Load S-Records.
 ;
 	include	"../lib/s19-loader.exp"
-BCall_s19_load_desc
-	fcc	BCall_s19_load_bank
-	fdb	BCall_s19_load_slot
+	BCall_desc "s19_load"
 cmd_loads
 	; Push a s19ctx onto the stack.
 	leas	-s19ctx_ctxsize,S
@@ -976,8 +974,7 @@ cmd_loads
 
 	jsr	iputs
 	fcn	"Waiting for S-Records...\r\n"
-	ldy	#BCall_s19_load_desc	; Go load them!
-	jsr	brom_call
+	BCall	"s19_load"		; Go load them!
 	bne	1F			; Go handle any error.
 
 	jsr	iputs
@@ -1024,24 +1021,18 @@ cmd_loads
 ; cmd_help
 ;	Get help.
 ;
-BCall_cmd_help_desc
-	fcc	BCall_cmd_help_bank
-	fdb	BCall_cmd_help_slot
+	BCall_desc "cmd_help"
 cmd_help
-	ldy	#BCall_cmd_help_desc
-	jsr	brom_call
+	BCall	"cmd_help"
 	jmp	monitor_main
 
 ;
 ; cmd_oink
 ;	The dumbest little easter egg.
 ;
-BCall_cmd_oink_desc
-	fcc	BCall_cmd_oink_bank
-	fdb	BCall_cmd_oink_slot
+	BCall_desc "cmd_oink"
 cmd_oink
-	ldy	#BCall_cmd_oink_desc
-	jsr	brom_call
+	BCall	"cmd_oink"
 	jmp	monitor_main
 
 	;

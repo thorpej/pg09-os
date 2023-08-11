@@ -29,12 +29,34 @@
 ;
 
 ;
-; Generate a Banked Call jump table entry.  These entries will then
+; Declare a Banked Call jump table entry.  These entries will then
 ; be used by gen-bcalls.sh to generate the Banked Call Descriptors
-; that can be used by consumers of the banked call routine.
+; that can be used by consumers of the banked call routine.  The
+; order and location of these entries in a source code file will
+; determine the ABI for that ranked ROM module.  It is recommended
+; that BCall_decl entries start at the beginning or end of the
+; Banked ROM address range and grow towards the middle.
+;
+BCall_decl	macro
+BCall_\1	fdb     \1
+		endm
+
+;
+; Reference a Banked Call.
+;
+BCall_desc	macro
+BCall_\1_desc
+		fcc	BCall_\1_bank
+		fdb	BCall_\1_slot
+		endm
+
+;
+; Invoke a Banked ROM Call.
+; N.B. CLOBBERS Y
 ;
 BCall		macro
-BCall_\1	fdb     \1
+		ldy	#BCall_\1_desc
+		jsr	[SysSubr_brom_call]
 		endm
 
 ;
