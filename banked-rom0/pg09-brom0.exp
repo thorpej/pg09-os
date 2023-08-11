@@ -32,10 +32,4 @@ pg09_brom0_exp_included	equ	1
 
 BCall_cmd_oink equ 49152
 
-	if Use_BCall_cmd_oink
-BCall_cmd_oink_desc
-	fdb	BCall_cmd_oink
-	fcc	0
-	endif
-
 	endif	; pg09_brom0_exp_included
