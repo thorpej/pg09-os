@@ -49,7 +49,7 @@ ${bcall_file_ub}_included	equ	1
 _EOF
 (for bcall_targ in $BCall_list; do
 	bcall_name=`grep "${bcall_targ}$" "$sym_file" | cut -f 1`
-	bcall_val=`grep "^BCall_${subr_targ}" "$sym_file" | cut -f 3`
+	bcall_val=`grep "^BCall_${bcall_targ}" "$sym_file" | cut -f 3`
 	if [ x"$bcall_name" != x ]; then
 		awk -v bcall_targ=$bcall_targ -v bcall_name=$bcall_name \
 		    -v bcall_val=$bcall_val -v bankno=$bankno \
