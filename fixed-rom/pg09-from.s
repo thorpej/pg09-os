@@ -388,7 +388,8 @@ hbram_switch
 ;		2,S	<maybe arguments pushed onto the stack>
 ;		0,S	return address
 ;
-;	But a banked-call looks like this:
+;	But a banked-call looks more like this, and even this is not
+;	guaranteed:
 ;
 ;		8,S	<maybe arguments pushed onto the stack>
 ;		6,S	return address (back to caller of trampoline)
@@ -429,36 +430,42 @@ hbram_switch
 ;	None.
 ;
 brom_call
-	pshs	A,Y		; Save A and Y.
+	pshs	CC,A,Y		; Save A and Y, make a spot for CC
 	;
-	; 3,S		return address
-	; 2,S		saved Y (lsb)
-	; 1,S		saved Y (msb)
-	; 0,S		saved A
+	; 4,S		return address
+	; 3,S		saved Y (lsb)
+	; 2,S		saved Y (msb)
+	; 1,S		saved A
+	; 0,S		CC slot
 	;
 	lda	,Y		; A = target bank #
 	ldy	1,Y		; Y = address of jump table slot
 	bsr	brom_switch	; Switch banks.
 	pshs	A		; Save previous bank.
 	;
+	; 5,S		return address
+	; 4,S		saved Y (lsb)
+	; 3,S		saved Y (msb)
+	; 2,S		saved A
+	; 1,S		saved CC
+	; 0,S		saved bank
+	;
+	lda	2,S		; retrieve saved A
+	jsr	[,Y]		; call the subroutine
+	pshs	CC		; saved resulting CC
+	sta	2,S		; stash what we'll return in A
+	puls	A		; get resulting CC into A
+	sta	1,S		; save it in CC return slot
+	puls	A		; get saved bank
+	;
 	; 4,S		return address
 	; 3,S		saved Y (lsb)
 	; 2,S		saved Y (msb)
 	; 1,S		saved A
-	; 0,S		saved bank
-	;
-	lda	1,S		; retrieve saved A
-	jsr	[,Y]		; call the subroutine
-	sta	1,S		; stash what we'll return in A
-	puls	A		; get saved bank
-	;
-	; 3,S		return address
-	; 2,S		saved Y (lsb)
-	; 1,S		saved Y (msb)
-	; 0,S		saved A
+	; 0,S		saved CC
 	;
 	bsr	brom_switch	; Switch to to saved bank
-	puls	A,Y,PC		; Restore and return.
+	puls	CC,A,Y,PC	; Restore and return.
 
 ;
 ; panic
