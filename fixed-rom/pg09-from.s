@@ -825,142 +825,10 @@ cmd_jump
 ; cmd_reg
 ;	Print or set a register.
 ;
+	BCall_desc "cmd_reg"
 cmd_reg
-	jsr	parseeol		; consume whitespace, check for EOL
-	bne	cmd_reg_printall	; if EOL, print all regs
-
-	lda	#1			; Push a 1 onto the stack (count)
-	pshs	A
-
-	ldy	#cmd_reg_parsetab	; Y = reg name table
-	jsr	parsetbl_lookup		; lookup the reg name
-	lbeq	syntax_error		; Not found, syntax error.
-	pshs	A			; push index onto stack
-
-	jsr	parseeol		; consume whitespace, check for EOL
-	bne	cmd_reg_printloop	; if EOL, print the one reg
-
-	jsr	parsehex16		; D = new value
-	lbeq	syntax_error		; Not number, syntax error.
-	lbvs	syntax_error		; Overflow, syntax error.
-	pshs	D			; squirrel it away on the stack
-	jsr	parseeol		; make sure we're at EOL now.
-	lbeq	syntax_error		; No, syntax error.
-
-	ldy	current_iframe
-	ldx	#cmd_reg_iframeoffs	; X = frame offset table
-	ldb	2,S			; B = index
-	ldb	B,X			; B = frame offset
-	leay	B,Y			; Y += register offset in iframe
-
-	ldb	2,S			; B = index (again)
-	cmpb	#cmd_reg_iframeoffs16	; Does index say "16-bit value"?
-	bhs	1F			; Go deal with it.
-
-	tsta				; Did we overflow 8 bits?
-	lbne	syntax_error		; Yes, syntax error.
-	ldb	1,S			; B = value
-	stb	,Y			; store the value in the iframe.
+	BCall	"cmd_reg"
 	jmp	monitor_main
-
-1	ldd	,S			; D = value
-	std	,Y			; store the value in the iframe
-	jmp	monitor_main
-
-cmd_reg_printall
-	lda	#9			; push 9 onto the stack for count
-	pshs	A
-	clr	,-S			; push 0 onto the stack for index
-
-cmd_reg_printloop
-	ldy	current_iframe
-	lda	,S			; get current index
-	ldx	#cmd_reg_printnames	; X = print name table
-
-	asla				; index to pointer table offset
-	ldx	A,X			; X = print name
-	lsra				; back to index
-
-	jsr	puts			; print register name
-	jsr	iputs			; and separator
-	fcn	": "
-
-	ldx	#cmd_reg_iframeoffs	; X = frame offsets
-	ldb	A,X			; B = frame offset
-	leay	B,Y			; Y += offset into iframe
-
-	cmpa	#cmd_reg_iframeoffs16	; 16-bit value in frame?
-	bhs	1F			; go deal with it
-
-	lda	,Y			; load 8-bit value from frame
-	jsr	printhex8
-	bra	2F
-
-1	ldd	,Y			; load 16-bit value from frame
-	jsr	printhex16
-
-2	jsr	puts_crlf
-	inc	,S			; index++
-	dec	1,S			; count--
-	bne	cmd_reg_printloop	; Go around again if more to do.
-	jmp	monitor_main
-
-cmd_reg_parsetab
-	fcc	"CC",'R'+$80
-	fcc	'A'+$80
-	fcc	'B'+$80
-	fcc	'D','P'+$80
-	fcc	'D'+$80
-	fcc	'X'+$80
-	fcc	'Y'+$80
-	fcc	'U'+$80
-	fcc	'P','C'+$80
-	fcc	0
-
-cmd_reg_iframeoffs
-	fcc	IFE_CCR
-	fcc	IFE_A
-	fcc	IFE_B
-	fcc	IFE_DP
-cmd_reg_iframeoffs_D
-	fcc	IFE_A		; D
-	fcc	IFE_X
-	fcc	IFE_Y
-	fcc	IFE_U
-	fcc	IFE_PC
-
-cmd_reg_iframeoffs16	equ	(cmd_reg_iframeoffs_D - cmd_reg_iframeoffs)
-
-cmd_reg_printnames
-	fdb	reg_printname_CCR
-	fdb	reg_printname_A
-	fdb	reg_printname_B
-	fdb	reg_printname_DP
-	fdb	reg_printname_D
-	fdb	reg_printname_X
-	fdb	reg_printname_Y
-	fdb	reg_printname_U
-	fdb	reg_printname_PC
-	fdb	0
-
-reg_printname_CCR
-	fcn	"CCR"
-reg_printname_A
-	fcn	"  A"
-reg_printname_B
-	fcn	"  B"
-reg_printname_DP
-	fcn	" DP"
-reg_printname_D
-	fcn	"  D"
-reg_printname_X
-	fcn	"  X"
-reg_printname_Y
-	fcn	"  Y"
-reg_printname_U
-	fcn	"  U"
-reg_printname_PC
-	fcn	" PC"
 
 ;
 ; cmd_loads
@@ -986,7 +854,7 @@ cmd_loads
 
 	jsr	iputs
 	fcn	"Read "
-	ldd	s19ctx_nrecs,U	; Print record counts
+	ldd	s19ctx_nrecs,U		; Print record counts
 	jsr	printdec16
 	jsr	iputs
 	fcn	" records ("
