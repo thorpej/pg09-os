@@ -58,7 +58,7 @@ s19_get_record
 	lbsr	s19_getc	; wait for the start-of-record
 	cmpa	#'S'
 	bne	s19_get_record	; nope, still waiting
-	ldd	s19ctx_nrecs,U ; increment record count
+	ldd	s19ctx_nrecs,U	; increment record count
 	addd	#1
 	std	s19ctx_nrecs,U
 	lbsr	s19_getc	; now get the type
