@@ -37,6 +37,7 @@
 	include "../fixed-ram/pg09-fram.exp"
 
 	include "../sys-api/pg09-os.exp"
+	include "../banked-rom0/pg09-brom0.exp"
 
 	setdp	-1	; Disable automatic direct page addressing
 
@@ -1116,12 +1117,12 @@ cmd_help_regs
 	fcn	"  D X Y U PC\r\n"
 	jmp	monitor_main
 
-cmd_oink_bcall
-	fdb	BROM_START+0
-	fcc	0
+BCall_cmd_oink_desc
+	fdb	BCall_cmd_oink_slot
+	fcc	BCall_cmd_oink_bank
 
 cmd_oink
-	ldy	#cmd_oink_bcall
+	ldy	#BCall_cmd_oink_desc
 	jsr	brom_call
 	jmp	monitor_main
 
