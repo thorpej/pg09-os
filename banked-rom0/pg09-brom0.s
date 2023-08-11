@@ -30,6 +30,7 @@
 
 	include "../../pg09-system/asm/pg09_defs.s"
 	include "../drivers/mc6809/mc6809_defs.s"
+	include "../lib/ascii_defs.s"
 	include "../lib/asm_macros.inc"
 
 	include "../fixed-ram/pg09-fram.exp"
@@ -46,16 +47,21 @@
 ;
 	BCall cmd_help
 	BCall cmd_oink
+	BCall s19_load
 
 ;
 ; Code goes here.
 ;
 
+	include "../lib/memzero8.s"
 	include "../lib/parseeol.s"
 	include "../lib/parsews.s"
 	include "../lib/parsetbl.s"
 	include	"../lib/puts.s"
 	include "../lib/toupper.s"
+
+	include "../lib/s19-loader.exp"
+	include "../lib/s19-loader.s"
 
 ;
 ; cmd_help
