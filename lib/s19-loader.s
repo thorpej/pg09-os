@@ -50,7 +50,7 @@ s19_load
 	lda	#s19ctx_getc	; (except for s19ctx_getc at the end)
 	lbsr	memzero8
 	;
-	; Fall into s19_get_record.  Tail if this function is at
+	; Fall into s19_get_record.  Tail of this function is at
 	; s19_load_done below.
 	;
 s19_get_record
