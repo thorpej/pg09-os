@@ -64,22 +64,6 @@ _EOF
 	fi
 done) | sort >> "$tmp_file"
 
-#
-# XXX This bit isn't working with asm6809 for whatever reason.
-# XXX Figure it out later.
-#
-#BCall_list=`grep "^BCall_" "$tmp_file" | cut -d ' ' -f 1`
-#for bcall_name in $BCall_list; do
-#	cat << _EOF >> "$tmp_file"
-#
-#	if Use_${bcall_name}
-#${bcall_name}_desc
-#	fdb	${bcall_name}
-#	fcc	${bankno}
-#	endif
-#_EOF
-#done
-
 cat << _EOF >> "$tmp_file"
 
 	endif	; ${bcall_file_ub}_included
