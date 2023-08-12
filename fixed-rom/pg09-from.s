@@ -87,7 +87,7 @@ SysAddr_BankedROM_size		set	BROM_SIZE
 
 pg09os_hello
 	fcc	"@thorpej's 6809 Playground OS, version "
-	fcc	"0.1"		; Change version number here!
+	fcc	"0.2"		; Change version number here!
 	fcn	"\r\n"
 
 pg09_cpu_banner
