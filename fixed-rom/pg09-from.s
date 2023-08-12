@@ -150,7 +150,7 @@ warmer_boot
 	;
 	; Re-initialize the console.
 	;
-	; XXX cons_reinit
+	jsr	cons_reinit
 
 	;
 	; XXX Here is where we would re-load the shell and return

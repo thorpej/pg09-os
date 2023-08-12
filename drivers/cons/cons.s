@@ -48,6 +48,22 @@ cons_init
 	jmp	acia_init
 
 ;
+; cons_reinit --
+;	Re-initialize the console after a program has run.
+;
+; Arguments --
+;	None.
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+cons_reinit
+	jmp	acia_reinit
+
+;
 ; cons_putc --
 ;	Output a character on the console.
 ;

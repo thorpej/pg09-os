@@ -109,6 +109,24 @@ acia_init
 	rts
 
 ;
+; acia_reinit --
+;	Re-initialize the ACIA UART.  This is intended to bring the
+;	console back on-line after a program runs and maybe screws
+;	with it.  It's not needed for a serial console.
+;
+; Arguments --
+;	None.
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+acia_reinit
+	rts
+
+;
 ; acia_putchar --
 ;	Output a character on the UART.
 ;
