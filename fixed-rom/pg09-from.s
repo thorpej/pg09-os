@@ -109,6 +109,8 @@ pg09_hbram_banner_tail
 pg09_hbram_probe_bad_str
 	fcn	"bad HBRAM"
 
+	include	"build_date.s"
+
 ; HBRAM bank values for the last bank of each 512K RAM chip.
 pg09_hbram_probe_tab
 	fcb	$3F, $7F, $BF, $FF
@@ -232,6 +234,11 @@ cold_boot
 	;
 	ldx	#pg09os_hello
 	jsr	puts
+	jsr	iputs
+	fcn	"Built: "
+	ldx	#build_date
+	jsr	puts
+	jsr	puts_crlf
 
 	;
 	; Report the CPU we're built for and it's clock speed.
