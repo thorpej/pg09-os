@@ -85,30 +85,6 @@ SysAddr_HighBankedRAM_size	set	HBRAM_SIZE
 SysAddr_BankedROM		set	BROM_START
 SysAddr_BankedROM_size		set	BROM_SIZE
 
-pg09os_hello
-	fcc	"@thorpej's 6809 Playground OS, version "
-	fcc	"0.2"		; Change version number here!
-	fcn	"\r\n"
-
-pg09_cpu_banner
-	fcc	"CPU: "
-	if	CONFIG_6309
-	fcc	"6309E"
-	else
-	fcc	"6809E"
-	endif
-	fcn	" @ "
-pg09_cpu_banner_tail
-	fcn	"MHz\r\n"
-
-pg09_hbram_banner
-	fcn	"HBRAM: "
-pg09_hbram_banner_tail
-	fcn	"KB\r\n"
-
-pg09_hbram_probe_bad_str
-	fcn	"bad HBRAM"
-
 	include	"build_date.s"
 
 ; HBRAM bank values for the last bank of each 512K RAM chip.
@@ -232,9 +208,10 @@ cold_boot
 	;
 	; Hello, world!
 	;
-	ldx	#pg09os_hello
-	jsr	puts
 	jsr	iputs
+	fcc	"@thorpej's 6809 Playground OS, version "
+	fcc	"0.2"		; Change version number here!
+	fcc	"\r\n"
 	fcn	"Built: "
 	ldx	#build_date
 	jsr	puts
@@ -243,12 +220,18 @@ cold_boot
 	;
 	; Report the CPU we're built for and it's clock speed.
 	;
-	ldx	#pg09_cpu_banner
-	jsr	puts
+	jsr	iputs
+	fcc	"CPU: "
+	if	CONFIG_6309
+	fcc	"6309E"
+	else
+	fcc	"6809E"
+	endif
+	fcn	" @ "
 	lda	CLOCK_SPEED_REG
 	jsr	printdec8
-	ldx	#pg09_cpu_banner_tail
-	jsr	puts
+	jsr	iputs
+	fcn	"MHz\r\n"
 
 	;
 	; Probe the High Banked RAM size.  We assume there's at least
@@ -291,16 +274,18 @@ cold_boot
 	asla				; Multiply by 2 to form the MSB
 	clrb				; of # KB of HBRAM.
 
-	ldx	#pg09_hbram_banner
-	jsr	puts
+	jsr	iputs
+	fcn	"HBRAM: "
 	jsr	printdec16
-	ldx	#pg09_hbram_banner_tail
-	jsr	puts
+	jsr	iputs
+	fcn	"KB\r\n"
 
 	jmp	warm_boot		; Now go do a warm boot.
 
+panicstr_bad_hbram
+	fcn	"bad HBRAM"
 panic_bad_hbram
-	ldx	#pg09_hbram_probe_bad_str
+	ldx	#panicstr_bad_hbram
 	jmp	panic
 
 	;
