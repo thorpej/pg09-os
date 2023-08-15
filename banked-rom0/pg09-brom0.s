@@ -324,19 +324,23 @@ cmd_help
 monitor_helptab
 	fcc	'@'+$80			; access memory
 	fcc	'J'+$80			; jump to address
+	fcc	"RESE",'T'+$80		; reset the system
 	fcc	"REG",'S'+$80		; registers
 	fcc	'R'+$80			; print / set register
 	fcc	"LOAD",'S'+$80		; load S-Records
 	fcc	"ADDR",'S'+$80		; symbolic addresses
+	fcc	"OF",'F'+$80		; power off the system
 	fcc	0
 
 monitor_helpjmptab
 	fdb	cmd_help_access_mem
 	fdb	cmd_help_jump
+	fdb	cmd_help_reset
 	fdb	cmd_help_regs
 	fdb	cmd_help_reg
 	fdb	cmd_help_loads
 	fdb	cmd_help_addrs
+	fdb	cmd_help_off
 	fdb	cmd_help_generic
 
 cmd_help_generic
@@ -346,6 +350,8 @@ cmd_help_generic
 	fcc	"J     - jump to address\r\n"
 	fcc	"R     - print / set register\r\n"
 	fcc	"LOADS - load S-Records\r\n"
+	fcc	"RESET - reset the system\r\n"
+	fcc	"OFF   - power off the system\r\n"
 	fcc	"?     - help\r\n"
 	fcn	"Use '? <cmd>' for additional help.\r\n"
 	rts
@@ -404,6 +410,18 @@ cmd_help_regs
 	fcc	"  A B CCR DP\r\n\r\n"
 	fcc	"16-bit registers:\r\n"
 	fcn	"  D X Y U PC\r\n"
+	rts
+
+cmd_help_reset
+	jsr	iputs
+	fcc	"Resets the system by asking the PMU to\r\n"
+	fcn	"assert the /RESET signal.\r\n"
+	rts
+
+cmd_help_off
+	jsr	iputs
+	fcc	"Powers off the system by asking the PMU to\r\n"
+	fcn	"switch off the ATX power supply.\r\n"
 	rts
 
 ;

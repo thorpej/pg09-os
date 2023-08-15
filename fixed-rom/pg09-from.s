@@ -161,11 +161,13 @@ cold_boot
 
 	; Ensure DDR is selected by clearing each CR.
 	clr	ROM_BANKER_PIA+PIA_REG_CRA
+	clr	ROM_BANKER_PIA+PIA_REG_CRB
 	clr	RAM_BANKER_PIA+PIA_REG_CRA
 	clr	RAM_BANKER_PIA+PIA_REG_CRB
 
 	lda	#$FF			; All port pins are outputs
 	sta	ROM_BANKER_PIA+PIA_REG_DDRA
+	sta	ROM_BANKER_PIA+PIA_REG_DDRB
 	sta	RAM_BANKER_PIA+PIA_REG_DDRA
 	sta	RAM_BANKER_PIA+PIA_REG_DDRB
 
@@ -174,6 +176,10 @@ cold_boot
 	sta	ROM_BANKER_PIA+PIA_REG_CRA
 	sta	RAM_BANKER_PIA+PIA_REG_CRA
 	sta	RAM_BANKER_PIA+PIA_REG_CRB
+
+	; The PMU port gets a PULSE on CB2
+	ora	#PIA_CRx_Cx2_PULSE
+	sta	ROM_BANKER_PIA+PIA_REG_CRB
 
 	; Set all banked regions to bank 0.
 	clr	ROM_BANK_REG
@@ -543,19 +549,23 @@ monitor_getline
 monitor_cmdtab
 	fcc	'@'+$80			; access memory
 	fcc	'J'+$80			; jump to address
+	fcc	"RESE",'T'+$80		; reset system
 	fcc	'R'+$80			; print / set register
 	fcc	"LOAD",'S'+$80		; load S-Records
 	fcc	'?'+$80			; help
 	fcc	"OIN",'K'+$80		; not "moo".
+	fcc	"OF",'F'+$80		; power off system
 	fcc	0
 
 monitor_cmdjmptab
 	fdb	cmd_access_mem
 	fdb	cmd_jump
+	fdb	cmd_reset
 	fdb	cmd_reg
 	fdb	cmd_loads
 	fdb	cmd_help
 	fdb	cmd_oink
+	fdb	cmd_off
 	fdb	cmd_unknown
 
 ;
@@ -829,6 +839,24 @@ cmd_reg
 	BCall_desc "cmd_loads"
 cmd_loads
 	BCall	"cmd_loads"
+	jmp	monitor_main
+
+;
+; cmd_reset
+;	Reset the system
+;
+cmd_reset
+	lda	#PSU_CTRL_RESET
+	sta	PSU_CTRL_REG
+	jmp	monitor_main
+
+;
+; cmd_off
+;	Power off the system
+;
+cmd_off
+	lda	#PSU_CTRL_POWEROFF
+	sta	PSU_CTRL_REG
 	jmp	monitor_main
 
 ;
