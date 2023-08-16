@@ -325,6 +325,7 @@ cmd_help
 
 monitor_helptab
 	fcc	'@'+$80			; access memory
+	fcc	'C'+$80			; continue from debugger
 	fcc	'J'+$80			; jump to address
 	fcc	"RESE",'T'+$80		; reset the system
 	fcc	"REG",'S'+$80		; registers
@@ -336,6 +337,7 @@ monitor_helptab
 
 monitor_helpjmptab
 	fdb	cmd_help_access_mem
+	fdb	cmd_help_continue
 	fdb	cmd_help_jump
 	fdb	cmd_help_reset
 	fdb	cmd_help_regs
@@ -349,6 +351,7 @@ cmd_help_generic
 	jsr	iputs
 	fcc	"Available commands:\r\n"
 	fcc	"@     - access memory\r\n"
+	fcc	"C     - continue from debugger\r\n"
 	fcc	"J     - jump to address\r\n"
 	fcc	"R     - print / set register\r\n"
 	fcc	"LOADS - load S-Records\r\n"
@@ -369,6 +372,12 @@ cmd_help_access_mem
 	fcc	"@addr,len val       - set len bytes at address to value\r\n"
 	fcc	"@,len val           - set len bytes at next address to value\r\n"
 	fcn	"Use '? addrs' for a list of symbolic addresses.\r\n"
+	rts
+
+cmd_help_continue
+	jsr	iputs
+	fcc	"C - continue from debugger.\r\n"
+	fcn	"This command is only valid after an NMI or breakpoint.\r\n"
 	rts
 
 cmd_help_jump
