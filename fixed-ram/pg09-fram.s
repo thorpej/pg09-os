@@ -63,6 +63,8 @@ jump_addr	rmb	2
 ;
 	export	current_iframe
 current_iframe	rmb	2
+	export	can_continue
+can_continue	rmb	1
 
 ; Put the monitor's interrupt frame at the top of FRAM.  This
 ; interrupt frame has an extra 2 bytes at the top that point

@@ -102,6 +102,7 @@ warm_boot
 	;
 	ldd	#$FFFF
 	std	jump_addr
+	clr	can_continue
 
 	;
 	; Push an empty interrupt frame onto the stack and record it
@@ -510,7 +511,7 @@ error
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 monitor_main
-	lds	#KSTACK_TOP		; Reset the stack pointer
+	lds	current_iframe		; Reset the stack pointer
 	jsr	monitor_getline		; X = command line
 	jsr	parsews			; toss leading whitespace
 	ldy	#monitor_cmdtab		; Y = command table
@@ -549,6 +550,7 @@ monitor_getline
 monitor_cmdtab
 	fcc	'@'+$80			; access memory
 	fcc	'J'+$80			; jump to address
+	fcc	'C'+$80			; continue
 	fcc	"RESE",'T'+$80		; reset system
 	fcc	'R'+$80			; print / set register
 	fcc	"LOAD",'S'+$80		; load S-Records
@@ -560,6 +562,7 @@ monitor_cmdtab
 monitor_cmdjmptab
 	fdb	cmd_access_mem
 	fdb	cmd_jump
+	fdb	cmd_continue
 	fdb	cmd_reset
 	fdb	cmd_reg
 	fdb	cmd_loads
@@ -842,6 +845,20 @@ cmd_loads
 	jmp	monitor_main
 
 ;
+; cmd_continue
+;	Continue an interrupted task
+;
+cmd_continue
+	tst	can_continue
+	beq	1F
+	clr	can_continue
+	rti
+
+1	jsr	iputs
+	fcn	"Cannot continue current iframe.\r\n"
+	jmp	monitor_main
+
+;
 ; cmd_reset
 ;	Reset the system
 ;
@@ -877,6 +894,27 @@ cmd_oink
 	BCall	"cmd_oink"
 	jmp	monitor_main
 
+;
+; debugger
+;	The debugger entry point.  This basically sets up some
+;	state and then jumps into the monitor loop.
+;
+debugger
+	sts	current_iframe		; current frame = our stack
+	lda	#1			; We can "continue" from this frame
+	sta	can_continue
+	jsr	iputs
+	fcn	"S=$"
+	tfr	S,D
+	jsr	printhex16
+	jsr	puts_crlf
+	jsr	iputs
+	fcn	"Stopped at PC=$"
+	ldd	IFE_PC,S
+	jsr	printhex16
+	jsr	puts_crlf
+	jmp	monitor_main
+
 	;
 	; VECTOR HANDLERS
 	;
@@ -903,7 +941,14 @@ vec_swi
 	rti
 
 vec_nmi
-	rti
+	;
+	; Re-enable interrupts ASAP, in case the console is relying
+	; on them.
+	;
+	andcc	#~CC_I
+	jsr	iputs
+	fcn	"Debugger switch!\r\n"
+	jmp	debugger
 
 vec_reset	equ	cold_boot
 

@@ -253,6 +253,7 @@ cmd_loads
 	; Make sure the jump_addr is invalid in case the load fails.
 	ldd	#$FFFF
 	std	jump_addr
+	clr	can_continue
 
 	jsr	iputs
 	fcn	"Waiting for S-Records...\r\n"
@@ -272,6 +273,7 @@ cmd_loads
 
 	ldd	s19ctx_addr,U		; Get the entry point
 	std	jump_addr		; ...and make it jump'able.
+	clr	can_continue
 
 	jsr	iputs
 	fcn	"Entry point: "
