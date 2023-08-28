@@ -175,12 +175,9 @@ cold_boot
 	; Disable DDR access / enable peripheral interface access.
 	lda	#PIA_CRx_DDR_PI
 	sta	ROM_BANKER_PIA+PIA_REG_CRA
+	sta	ROM_BANKER_PIA+PIA_REG_CRB
 	sta	RAM_BANKER_PIA+PIA_REG_CRA
 	sta	RAM_BANKER_PIA+PIA_REG_CRB
-
-	; The PMU port gets a PULSE on CB2
-	ora	#PIA_CRx_Cx2_PULSE
-	sta	ROM_BANKER_PIA+PIA_REG_CRB
 
 	; Set all banked regions to bank 0.
 	clr	ROM_BANK_REG
