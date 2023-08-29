@@ -406,10 +406,12 @@ cmd_help_addrs
 	jsr	iputs
 	fcc	"Available symbolic addresses:\r\n"
 	fcc	"  ROM_BANK_REG\r\n"
-	fcc	"  LBRAM_BANK_REG\r\n"
+	fcc	"  LBRAM0_BANK_REG\r\n"
+	fcc	"  LBRAM1_BANK_REG\r\n"
 	fcc	"  HBRAM_BANK_REG\r\n"
 	fcc	"  CLOCK_SPEED_REG\r\n"
-	fcc	"  LBRAM_START\r\n"
+	fcc	"  LBRAM0_START\r\n"
+	fcc	"  LBRAM1_START\r\n"
 	fcc	"  HBRAM_START\r\n"
 	fcc	"  BROM_START\r\n"
 	fcc	0

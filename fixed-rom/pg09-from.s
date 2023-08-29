@@ -61,7 +61,8 @@ SysSubr_\1	fdb	\1
 
 	SysSubr	brom_call
 	SysSubr brom_switch
-	SysSubr	lbram_switch
+	SysSubr	lbram0_switch
+	SysSubr	lbram1_switch
 	SysSubr	hbram_switch
 
 	SysSubr	cons_getc
@@ -78,18 +79,19 @@ SysSubr_\1	fdb	\1
 	; the operating system), nor should they care about Fixed
 	; ROM (only use the exported jump table slot addresses).
 	;
-SysAddr_LowBankedRAM		set	LBRAM_START
-SysAddr_LowBankedRAM_size	set	LBRAM_SIZE
+SysAddr_LowBankedRAM0		set	LBRAM0_START
+SysAddr_LowBankedRAM0_size	set	LBRAM0_SIZE
+SysAddr_LowBankedRAM1		set	LBRAM1_START
+SysAddr_LowBankedRAM1_size	set	LBRAM1_SIZE
+	; Convenience for programs that don't care abou banking.
+SysAddr_LowBankedRAM		set	LBRAM0_START
+SysAddr_LowBankedRAM_size	set	LBRAM0_SIZE+LBRAM1_SIZE
 SysAddr_HighBankedRAM		set	HBRAM_START
 SysAddr_HighBankedRAM_size	set	HBRAM_SIZE
 SysAddr_BankedROM		set	BROM_START
 SysAddr_BankedROM_size		set	BROM_SIZE
 
 	include	"build_date.s"
-
-; HBRAM bank values for the last bank of each 512K RAM chip.
-pg09_hbram_probe_tab
-	fcb	$3F, $7F, $BF, $FF
 
 warm_boot
 	;
@@ -161,36 +163,37 @@ cold_boot
 	;
 
 	; Ensure DDR is selected by clearing each CR.
-	clr	ROM_BANKER_PIA+PIA_REG_CRA
-	clr	ROM_BANKER_PIA+PIA_REG_CRB
-	clr	RAM_BANKER_PIA+PIA_REG_CRA
-	clr	RAM_BANKER_PIA+PIA_REG_CRB
+	clr	LOW_BANKER_PIA+PIA_REG_CRA
+	clr	LOW_BANKER_PIA+PIA_REG_CRB
+	clr	HIGH_BANKER_PIA+PIA_REG_CRA
+	clr	HIGH_BANKER_PIA+PIA_REG_CRB
 
 	lda	#$FF			; All port pins are outputs
-	sta	ROM_BANKER_PIA+PIA_REG_DDRA
-	sta	ROM_BANKER_PIA+PIA_REG_DDRB
-	sta	RAM_BANKER_PIA+PIA_REG_DDRA
-	sta	RAM_BANKER_PIA+PIA_REG_DDRB
+	sta	LOW_BANKER_PIA+PIA_REG_DDRA
+	sta	LOW_BANKER_PIA+PIA_REG_DDRB
+	sta	HIGH_BANKER_PIA+PIA_REG_DDRA
+	sta	HIGH_BANKER_PIA+PIA_REG_DDRB
 
 	; Disable DDR access / enable peripheral interface access.
 	lda	#PIA_CRx_DDR_PI
-	sta	ROM_BANKER_PIA+PIA_REG_CRA
-	sta	ROM_BANKER_PIA+PIA_REG_CRB
-	sta	RAM_BANKER_PIA+PIA_REG_CRA
-	sta	RAM_BANKER_PIA+PIA_REG_CRB
+	sta	LOW_BANKER_PIA+PIA_REG_CRA
+	sta	LOW_BANKER_PIA+PIA_REG_CRB
+	sta	HIGH_BANKER_PIA+PIA_REG_CRA
+	sta	HIGH_BANKER_PIA+PIA_REG_CRB
 
 	; Set all banked regions to bank 0.
-	clr	ROM_BANK_REG
-	clr	LBRAM_BANK_REG
+	clr	LBRAM0_BANK_REG
+	clr	LBRAM1_BANK_REG
 	clr	HBRAM_BANK_REG
+	clr	ROM_BANK_REG
 
 	;
-	; Put the stack in LBRAM so we can clear FRAM.
+	; Put the stack in LBRAM1 so we can clear FRAM.
 	;
 	; N.B. this is the first load of the stack pointer, which will
 	; unmask NMIs.
 	;
-	lds	#LBRAM_START+LBRAM_SIZE
+	lds	#LBRAM1_START+LBRAM1_SIZE
 
 	;
 	; Clear out FRAM.
@@ -237,60 +240,7 @@ cold_boot
 	jsr	iputs
 	fcn	"MHz\r\n"
 
-	;
-	; Probe the High Banked RAM size.  We assume there's at least
-	; 512KB, because the kernel requires it.
-	;
-	ldx	#pg09_hbram_probe_tab
-	ldy	#HBRAM_START
-	clra				; table index / probed chip count
-
-1	ldb	A,X
-	stb	HBRAM_BANK_REG
-
-	clr	,Y			; Store a 0 and make sure it sticks
-	tst	,Y
-	bne	2F
-
-	ldb	#$55			; Store $55 and make sure it sticks
-	stb	,Y
-	ldb	,Y
-	cmpb	#$55
-	bne	2F
-
-	asl	,Y			; Store $AA and make sure it sticks
-	ldb	,Y
-	cmpb	#$AA
-	bne	2F
-
-	inca				; Increment chip count.
-	cmpa	#4			; Have we probed all 4 chips?
-	blt	1B			; Nope, go back around.
-
-2	tsta
-	beq	panic_bad_hbram		; 0 means no HBRAM worked.
-	deca				; convert chip count to table index
-	ldb	A,X			; get max HBRAM bank #
-	stb	hbram_max_bank		; stash it for later
-	clr	HBRAM_BANK_REG		; back to bank 0
-
-	inca				; Back to chip count.
-	asla				; Multiply by 2 to form the MSB
-	clrb				; of # KB of HBRAM.
-
-	jsr	iputs
-	fcn	"HBRAM: "
-	jsr	printdec16
-	jsr	iputs
-	fcn	"KB\r\n"
-
 	jmp	warm_boot		; Now go do a warm boot.
-
-panicstr_bad_hbram
-	fcn	"bad HBRAM"
-panic_bad_hbram
-	ldx	#panicstr_bad_hbram
-	jmp	panic
 
 	;
 	; Library routines
@@ -332,6 +282,7 @@ panic_bad_hbram
 brom_switch
 	pshs	X		; Save X.
 	ldx	#ROM_BANK_REG	; bank register
+	anda	#BROM_MAXBANK
 bank_switch_common
 	pshs	B		; Save B.
 	ldb	,X		; B = previous bank number
@@ -340,8 +291,8 @@ bank_switch_common
 	puls	B,X,PC		; Restore and return.
 
 ;
-; lbram_switch
-;	Switch Low RAM banks.
+; lbram0_switch
+;	Switch Low RAM 0 banks.
 ;
 ; Arguments --
 ;	A - bank to switch to
@@ -352,9 +303,29 @@ bank_switch_common
 ; Clobbers --
 ;	None.
 ;
-lbram_switch
-	pshs	X		; Save X.
-	ldx	#LBRAM_BANK_REG	; bank register
+lbram0_switch
+	pshs	X		 ; Save X.
+	ldx	#LBRAM0_BANK_REG ; bank register
+	anda	#LBRAM_MAXBANK
+	bra	bank_switch_common
+
+;
+; lbram1_switch
+;	Switch Low RAM 1 banks.
+;
+; Arguments --
+;	A - bank to switch to
+;
+; Returns --
+;	A - previous bank number
+;
+; Clobbers --
+;	None.
+;
+lbram1_switch
+	pshs	X		 ; Save X.
+	ldx	#LBRAM1_BANK_REG ; bank register
+	anda	#LBRAM_MAXBANK
 	bra	bank_switch_common
 
 ;
@@ -373,6 +344,7 @@ lbram_switch
 hbram_switch
 	pshs	X		; Save X.
 	ldx	#HBRAM_BANK_REG	; bank register
+	anda	#HBRAM_MAXBANK
 	bra	bank_switch_common
 
 ;
@@ -777,20 +749,24 @@ parse_addr
 
 symbolic_addrtab
 	fcc	"ROM_BANK_RE",'G'+$80
-	fcc	"LBRAM_BANK_RE",'G'+$80
+	fcc	"LBRAM0_BANK_RE",'G'+$80
+	fcc	"LBRAM1_BANK_RE",'G'+$80
 	fcc	"HBRAM_BANK_RE",'G'+$80
 	fcc	"CLOCK_SPEED_RE",'G'+$80
-	fcc	"LBRAM_STAR",'T'+$80
+	fcc	"LBRAM0_STAR",'T'+$80
+	fcc	"LBRAM1_STAR",'T'+$80
 	fcc	"HBRAM_STAR",'T'+$80
 	fcc	"BROM_STAR",'T'+$80
 	fcb	0
 
 symbolic_addrs
 	fdb	ROM_BANK_REG
-	fdb	LBRAM_BANK_REG
+	fdb	LBRAM0_BANK_REG
+	fdb	LBRAM1_BANK_REG
 	fdb	HBRAM_BANK_REG
 	fdb	CLOCK_SPEED_REG
-	fdb	LBRAM_START
+	fdb	LBRAM0_START
+	fdb	LBRAM1_START
 	fdb	HBRAM_START
 	fdb	BROM_START
 symbolic_addrs_end

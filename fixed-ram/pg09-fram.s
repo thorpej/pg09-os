@@ -47,9 +47,6 @@ getline_maxcnt	equ	254	; leaves room for terminating NUL
 getline_cnt	rmb	1
 getline_buf	rmb	getline_maxcnt+1
 
-	export	hbram_max_bank
-hbram_max_bank	rmb	1
-
 	export	mem_access_addr,mem_access_len
 mem_access_addr	rmb	2
 mem_access_len	rmb	2
