@@ -217,7 +217,7 @@ cold_boot
 	;
 	jsr	iputs
 	fcc	"@thorpej's 6809 Playground OS, version "
-	fcc	"0.2"		; Change version number here!
+	fcc	"0.3"		; Change version number here!
 	fcc	"\r\n"
 	fcn	"Built: "
 	ldx	#build_date
