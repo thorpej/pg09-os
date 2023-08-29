@@ -21,9 +21,13 @@ all: $(ROM_IMAGES)
 build_date.s:
 	echo "build_date fcn \"`date`\"" > build_date.s
 
+.PHONY: sys-api
+sys-api:
+	sh ./gen-sysapi.sh pg09-from.sym ../sys-api/pg09-os.exp
+
 pg09-from.bin: build_date.s $(FROM_DEPS)
 	asm6809 -l pg09-from.lst -s pg09-from.sym -o $@ pg09-from.s
-	sh ./gen-sysapi.sh pg09-from.sym ../sys-api/pg09-os.exp
+	$(MAKE) sys-api
 
 clean_fram:
 	cd ../fixed-ram && $(MAKE) clean
