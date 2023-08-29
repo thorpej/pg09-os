@@ -89,8 +89,8 @@ cat << _EOF >> "$tmp_file"
 ;
 _EOF
 (for addr_name in $SysAddr_list; do
-	addr_val=`grep "^${addr_name}" "$sym_file" | grep -v _size | cut -f 3`
-	size_val=`grep "^${addr_name}" "$sym_file" | grep _size | cut -f 3`
+	addr_val=`grep "^${addr_name}	" "$sym_file" | cut -f 3`
+	size_val=`grep "^${addr_name}_size" "$sym_file" | cut -f 3`
 	echo "${addr_name} equ ${addr_val}"
 	echo "${addr_name}_size equ ${size_val}"
 done) | sort >> "$tmp_file"
