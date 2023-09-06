@@ -400,7 +400,8 @@ hbram_switch
 brom_call
 	pshs	CC,A,Y		; Save A and Y, make a spot for CC
 	;
-	; 4,S		return address
+	; 5,S		return address (lsb)
+	; 4,S		return address (msb)
 	; 3,S		saved Y (lsb)
 	; 2,S		saved Y (msb)
 	; 1,S		saved A
@@ -411,7 +412,8 @@ brom_call
 	bsr	brom_switch	; Switch banks.
 	pshs	A		; Save previous bank.
 	;
-	; 5,S		return address
+	; 6,S		return address (lsb)
+	; 5,S		return address (msb)
 	; 4,S		saved Y (lsb)
 	; 3,S		saved Y (msb)
 	; 2,S		saved A
@@ -426,7 +428,8 @@ brom_call
 	sta	1,S		; save it in CC return slot
 	puls	A		; get saved bank
 	;
-	; 4,S		return address
+	; 5,S		return address (lsb)
+	; 4,S		return address (msb)
 	; 3,S		saved Y (lsb)
 	; 2,S		saved Y (msb)
 	; 1,S		saved A
