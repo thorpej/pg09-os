@@ -45,7 +45,7 @@
 	; System SUBROUTINE jump table.  These are called like normal
 	; subroutines, not with SWI as with a system call, i.e.:
 	;
-	;	jsr	[SysSubr_brom_call]
+	;	jsr	[SysSubr_cons_getc]
 	;
 SysSubr		macro
 SysSubr_\1	fdb	\1
