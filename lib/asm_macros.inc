@@ -42,21 +42,12 @@ BCall_\1	fdb     \1
 		endm
 
 ;
-; Reference a Banked Call.
-;
-BCall_desc	macro
-BCall_\1_desc
-		fcc	BCall_\1_bank
-		fdb	BCall_\1_slot
-		endm
-
-;
 ; Invoke a Banked ROM Call.
-; N.B. CLOBBERS Y
 ;
 BCall		macro
-		ldy	#BCall_\1_desc
 		jsr	[SysSubr_brom_call]
+		fcc	BCall_\1_bank
+		fdb	BCall_\1_slot
 		endm
 
 ;

@@ -373,12 +373,11 @@ hbram_switch
 ;	to the subroutine.
 ;
 ; Arguments --
-;	Y - pointer to banked call descriptor.  A banked call descriptor
-;	is a 3 byte datum that has the format:
+;	A banked call descriptor is an immediate in the instruction
+;	stream.  This descriptor is a 3 byte datum that has the format:
 ;
-;		2	system address of routine jump table entry (lsb)
-;		1	system address of routine jump table entry (msb)
-;		0	bank number
+;		fcc	bank_number
+;		fdb	system address of routine's jump table entry
 ;
 ;	The reason for mandating a jump table is to de-tangle the symbol
 ;	namespace between the fixed ROM image and the banked ROM images.
@@ -394,52 +393,68 @@ hbram_switch
 ;	None.
 ;
 brom_call
-	pshs	CC,A,B,Y	; Save A,B, and Y, make a spot for CC
+	pshs	CC,A,X,U	; Save A, X, and U, make a spot for CC
 	;
-	; 6,S		return address (lsb)
-	; 5,S		return address (msb) (actually pointer to desc)
-	; 4,S		saved Y (lsb)
-	; 3,S		saved Y (msb)
-	; 2,S		saved B
+	; 7,S		return address (lsb)
+	; 6,S		return address (msb) (actually pointer to desc)
+	; 5,S		saved U (lsb)
+	; 4,S		saved U (msb)
+	; 3,S		saved X (lsb)
+	; 2,S		saved X (msb)
 	; 1,S		saved A
 	; 0,S		slot for new CC to return
 	;
-	lda	,Y		; A = target bank #
-	ldy	1,Y		; Y = address of jump table slot
+	ldx	6,S		; X = pointer to descriptor
+	lda	,X+		; A = target bank #
+	ldu	[,X++]		; U = value in jump table slot
+	stx	6,S		; Advance return address past descriptor
 	bsr	brom_switch	; Switch banks.
 	pshs	A		; Save previous bank.
+	pshs	U		; Push target routine address onto stack
 	;
-	; 7,S		return address (lsb)
-	; 6,S		return address (msb)
-	; 5,S		saved Y (lsb)
-	; 4,S		saved Y (msb)
-	; 3,S		saved B
-	; 2,S		saved A
-	; 1,S		slot for new CC to return
-	; 0,S		saved bank
+	; 10,S		return address (lsb)
+	; 9,S		return address (msb) (the real deal)
+	; 8,S		saved U (lsb)
+	; 7,S		saved U (msb)
+	; 6,S		saved X (lsb)
+	; 5,S		saved X (msb)
+	; 4,S		saved A
+	; 3,S		slot for new CC to return
+	; 2,S		saved bank
+	; 1,S		target routine address (lsb)
+	; 0,S		target routine address (msb)
 	;
-	lda	2,S		; retrieve saved A
-	jsr	[,Y]		; call the subroutine
+	ldu	7,S		; restore U for function call
+	ldx	5,S		; restore X for function call
+	lda	4,S		; restore A for function call
+	jsr	[,S]		; call the subroutine
 	pshs	CC		; saved resulting CC
 	;
-	; 8,S		return address (lsb)
-	; 7,S		return address (msb)
-	; 6,S		saved Y (lsb)
-	; 5,S		saved Y (msb)
-	; 4,S		saved B
-	; 3,S		saved A
-	; 2,S		slot for new CC to return
-	; 1,S		saved bank
+	; 11,S		return address (lsb)
+	; 10,S		return address (msb) (the real deal)
+	; 9,S		saved U (lsb)
+	; 8,S		saved U (msb)
+	; 7,S		saved X (lsb)
+	; 6,S		saved X (msb)
+	; 5,S		saved A
+	; 4,S		slot for new CC to return
+	; 3,S		saved bank
+	; 2,S		target routine address (lsb)
+	; 1,S		target routine address (msb)
 	; 0,S		new CC to return
 	;
-	sta	3,S		; stash what we'll return in A
+	stu	8,S		; stash what we'll return in U
+	stx	6,S		; stash what we'll return in X
+	sta	5,S		; stash what we'll return in A
 	puls	A		; get resulting CC into A
+	leas	2,S		; pop target routine address off stack
 	;
-	; 7,S		return address (lsb)
-	; 6,S		return address (msb)
-	; 5,S		saved Y (lsb)
-	; 4,S		saved Y (msb)
-	; 3,S		saved B
+	; 8,S		return address (lsb)
+	; 7,S		return address (msb) (the real deal)
+	; 6,S		saved U (lsb)
+	; 5,S		saved U (msb)
+	; 4,S		saved X (lsb)
+	; 3,S		saved X (msb)
 	; 2,S		saved A
 	; 1,S		slot for new CC to return
 	; 0,S		saved bank
@@ -447,16 +462,17 @@ brom_call
 	sta	1,S		; save it in CC return slot
 	puls	A		; get saved bank
 	;
-	; 6,S		return address (lsb)
-	; 5,S		return address (msb)
-	; 4,S		saved Y (lsb)
-	; 3,S		saved Y (msb)
-	; 2,S		saved B
+	; 7,S		return address (lsb)
+	; 6,S		return address (msb) (the real deal)
+	; 5,S		saved U (lsb)
+	; 4,S		saved U (msb)
+	; 3,S		saved X (lsb)
+	; 2,S		saved X (msb)
 	; 1,S		saved A
 	; 0,S		new CC to return
 	;
 	bsr	brom_switch	; Switch to to saved bank
-	puls	CC,A,B,Y,PC	; Restore and return.
+	puls	CC,A,X,U,PC	; Restore and return.
 
 ;
 ; panic
@@ -826,7 +842,6 @@ cmd_jump
 ; cmd_reg
 ;	Print or set a register.
 ;
-	BCall_desc "cmd_reg"
 cmd_reg
 	BCall	"cmd_reg"
 	jmp	monitor_main
@@ -835,7 +850,6 @@ cmd_reg
 ; cmd_loads
 ;	Load S-Records.
 ;
-	BCall_desc "cmd_loads"
 cmd_loads
 	BCall	"cmd_loads"
 	jmp	monitor_main
@@ -876,7 +890,6 @@ cmd_off
 ; cmd_help
 ;	Get help.
 ;
-	BCall_desc "cmd_help"
 cmd_help
 	BCall	"cmd_help"
 	jmp	monitor_main
@@ -885,7 +898,6 @@ cmd_help
 ; cmd_oink
 ;	The dumbest little easter egg.
 ;
-	BCall_desc "cmd_oink"
 cmd_oink
 	BCall	"cmd_oink"
 	jmp	monitor_main
