@@ -41,14 +41,13 @@ pg09_os_exp_included	equ	1
 ;
 SysSubr_brom_call equ 57346
 SysSubr_brom_switch equ 57348
-SysSubr_cons_getc equ 57356
-SysSubr_cons_getline equ 57362
-SysSubr_cons_pollc equ 57358
-SysSubr_cons_putc equ 57360
+SysSubr_cons_getc equ 57354
+SysSubr_cons_getline equ 57360
+SysSubr_cons_pollc equ 57356
+SysSubr_cons_putc equ 57358
 SysSubr_exit equ 57344
-SysSubr_hbram_switch equ 57354
-SysSubr_lbram0_switch equ 57350
-SysSubr_lbram1_switch equ 57352
+SysSubr_hbram_switch equ 57352
+SysSubr_lbram_switch equ 57350
 
 ;
 ; System Addresses.  These are the region addresses (and corresponding

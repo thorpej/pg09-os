@@ -61,8 +61,7 @@ SysSubr_\1	fdb	\1
 
 	SysSubr	brom_call
 	SysSubr brom_switch
-	SysSubr	lbram0_switch
-	SysSubr	lbram1_switch
+	SysSubr	lbram_switch
 	SysSubr	hbram_switch
 
 	SysSubr	cons_getc
@@ -285,17 +284,18 @@ brom_switch
 	anda	#BROM_MAXBANK
 bank_switch_common
 	pshs	B		; Save B.
+bank_switch_common0
 	ldb	,X		; B = previous bank number
 	sta	,X		; set new bank
 	tfr	B,A		; return old bank in A
 	puls	B,X,PC		; Restore and return.
 
 ;
-; lbram0_switch
-;	Switch Low RAM 0 banks.
+; lbram_switch
+;	Switch Low RAM banks.
 ;
 ; Arguments --
-;	A - bank to switch to
+;	A - bank to switch to + banking flags.
 ;
 ; Returns --
 ;	A - previous bank number
@@ -303,30 +303,51 @@ bank_switch_common
 ; Clobbers --
 ;	None.
 ;
-lbram0_switch
-	pshs	X		 ; Save X.
-	ldx	#LBRAM0_BANK_REG ; bank register
-	anda	#LBRAM_MAXBANK
-	bra	bank_switch_common
+; Notes --
+;	This routine examines the upper 2 bits of A and behaves as
+;	follows:
+;
+;		00	switch both LBRAM0 and LBRAM1
+;		01	switch only LBRAM0
+;		10	switch only LBRAM1
+;		11	switch both LBRAM0 and LBRAM1
+;
+;	This allows programs that don't particularly care about the
+;	16K split to naively treat the region as a single 32K unit.
+;
+;	N.B. when switching BOTH banks, the "previous bank" return
+;	will be for LBRAM0 only!
+;
+lbram_switch
+	pshs	B,X		; Save registers.
+	tfr	A,B		; argument into B
+	anda	#LBRAM_MAXBANK	; get rid of flag bits
+	rolb			; Get the upper 2 bits...
+	rolb			; ...of B into...
+	rolb			; ...the lower 2 bits.
+	andb	#3		; get rid of irrelavant bits
+	aslb			; index to table offset
+	ldx	#lbram_switch_jmptab
+	jmp	[B,X]		; go handle the case we're asked to handle.
 
-;
-; lbram1_switch
-;	Switch Low RAM 1 banks.
-;
-; Arguments --
-;	A - bank to switch to
-;
-; Returns --
-;	A - previous bank number
-;
-; Clobbers --
-;	None.
-;
-lbram1_switch
-	pshs	X		 ; Save X.
-	ldx	#LBRAM1_BANK_REG ; bank register
-	anda	#LBRAM_MAXBANK
-	bra	bank_switch_common
+lbram_switch_jmptab
+	fdb	lbram_switch_both
+	fdb	lbram_switch_0
+	fdb	lbram_switch_1
+	fdb	lbram_switch_both
+
+lbram_switch_0
+	ldx	#LBRAM0_BANK_REG
+	bra	bank_switch_common0
+
+lbram_switch_1
+	ldx	#LBRAM1_BANK_REG
+	bra	bank_switch_common0
+
+lbram_switch_both
+	sta	LBRAM1_BANK_REG	 ; set LBRAM1 first
+	ldx	#LBRAM0_BANK_REG ; then go do LBRAM0
+	bra	bank_switch_common0
 
 ;
 ; hbram_switch
