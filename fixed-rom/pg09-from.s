@@ -354,18 +354,29 @@ hbram_switch
 ;	has a stack that looks like this:
 ;
 ;		2,S	<maybe arguments pushed onto the stack>
-;		0,S	return address
+;		1,S	return address (lsb)
+;		0,S	return address (msb)
 ;
-;	But a banked-call looks more like this, and even this is not
-;	guaranteed:
+;	But the banked call trampoline uses the stack as a working
+;	area.  The stack when the target function is called looks
+;	like this:
 ;
-;		8,S	<maybe arguments pushed onto the stack>
-;		6,S	return address (back to caller of trampoline)
-;		5,S	...
-;		4,S	...
-;		3,S	scratch area for trampoline
-;		2,S	saved previous bank number
-;		0,S	return address (back to trampoline)
+;		13,S	<maybe arguments pushed onto the stack>
+;		12,S	return address (lsb) (back to caller of trampoline)
+;		11,S	return address (msb) (back to caller of trampoline)
+;		10,S	...
+;		9,S	...
+;		8,S	...
+;		7,S	...
+;		6,S	...
+;		5,S	<scratch area for trampoline>
+;		4,S	saved bank
+;		3,S	target routine address (lsb)
+;		2,S	target routine address (msb)
+;		1,S	return address (to trampoline) (lsb)
+;		0,S	return address (to trampoline) (msb)
+;
+;	...and even this is not a guarantee.
 ;
 ;	For this reason, it is recommended that arguments are passed
 ;	just in registers.  If you really want to push arguments onto
@@ -428,7 +439,7 @@ brom_call
 	ldx	5,S		; restore X for function call
 	lda	4,S		; restore A for function call
 	jsr	[,S]		; call the subroutine
-	pshs	CC		; saved resulting CC
+	pshs	CC		; save resulting CC
 	;
 	; 11,S		return address (lsb)
 	; 10,S		return address (msb) (the real deal)
@@ -443,35 +454,27 @@ brom_call
 	; 1,S		target routine address (msb)
 	; 0,S		new CC to return
 	;
-	stu	8,S		; stash what we'll return in U
-	stx	6,S		; stash what we'll return in X
-	sta	5,S		; stash what we'll return in A
-	puls	A		; get resulting CC into A
-	leas	2,S		; pop target routine address off stack
+	; From this point on, we'll only adjust the stack once before
+	; return because it'll be a few cycles faster.
 	;
-	; 8,S		return address (lsb)
-	; 7,S		return address (msb) (the real deal)
-	; 6,S		saved U (lsb)
-	; 5,S		saved U (msb)
-	; 4,S		saved X (lsb)
-	; 3,S		saved X (msb)
-	; 2,S		saved A
-	; 1,S		slot for new CC to return
-	; 0,S		saved bank
-	;
-	sta	1,S		; save it in CC return slot
-	puls	A		; get saved bank
+	stu	8,S		; stash updated U
+	stx	6,S		; stash updated X
+	sta	5,S		; stash updated A
+	lda	,S		; get resulting CC into A
+	sta	4,S		; save it in CC return slot
+	lda	3,S		; get saved bank
+	bsr	brom_switch	; Switch to to saved bank
+	leas	4,S		; pop that stuff off the stack
 	;
 	; 7,S		return address (lsb)
 	; 6,S		return address (msb) (the real deal)
-	; 5,S		saved U (lsb)
-	; 4,S		saved U (msb)
-	; 3,S		saved X (lsb)
-	; 2,S		saved X (msb)
-	; 1,S		saved A
-	; 0,S		new CC to return
+	; 5,S		updated U (lsb)
+	; 4,S		updated U (msb)
+	; 3,S		updated X (lsb)
+	; 2,S		updated X (msb)
+	; 1,S		updated A
+	; 0,S		slot for new CC to return
 	;
-	bsr	brom_switch	; Switch to to saved bank
 	puls	CC,A,X,U,PC	; Restore and return.
 
 ;
