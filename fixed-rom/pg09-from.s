@@ -376,18 +376,14 @@ hbram_switch
 ;	Y - pointer to banked call descriptor.  A banked call descriptor
 ;	is a 3 byte datum that has the format:
 ;
-;		1,Y	system address of routine jump table entry
-;		0,Y	bank number
+;		2	system address of routine jump table entry (lsb)
+;		1	system address of routine jump table entry (msb)
+;		0	bank number
 ;
-;	N.B. this similar to what is pushed onto the stack during
-;	a banked call, but is not the same.  The reason for mandating
-;	a jump table is to de-tangle the symbol namespace between the
-;	fixed ROM image and the banked ROM images.  Banked ROM images
-;	can, as a separate step, define their outside entry points for
-;	other modules to import.
-;
-;	Y register is undefined upon entry to a banked ROM call and
-;	banked ROM calls may use Y without first saving it.
+;	The reason for mandating a jump table is to de-tangle the symbol
+;	namespace between the fixed ROM image and the banked ROM images.
+;	Banked ROM images can, as a separate step, define their outside
+;	entry points for other modules to import.
 ;
 ;	Other arguments defined by the subroutine being called.
 ;
@@ -398,45 +394,69 @@ hbram_switch
 ;	None.
 ;
 brom_call
-	pshs	CC,A,Y		; Save A and Y, make a spot for CC
+	pshs	CC,A,B,Y	; Save A,B, and Y, make a spot for CC
 	;
-	; 5,S		return address (lsb)
-	; 4,S		return address (msb)
-	; 3,S		saved Y (lsb)
-	; 2,S		saved Y (msb)
+	; 6,S		return address (lsb)
+	; 5,S		return address (msb) (actually pointer to desc)
+	; 4,S		saved Y (lsb)
+	; 3,S		saved Y (msb)
+	; 2,S		saved B
 	; 1,S		saved A
-	; 0,S		CC slot
+	; 0,S		slot for new CC to return
 	;
 	lda	,Y		; A = target bank #
 	ldy	1,Y		; Y = address of jump table slot
 	bsr	brom_switch	; Switch banks.
 	pshs	A		; Save previous bank.
 	;
-	; 6,S		return address (lsb)
-	; 5,S		return address (msb)
-	; 4,S		saved Y (lsb)
-	; 3,S		saved Y (msb)
+	; 7,S		return address (lsb)
+	; 6,S		return address (msb)
+	; 5,S		saved Y (lsb)
+	; 4,S		saved Y (msb)
+	; 3,S		saved B
 	; 2,S		saved A
-	; 1,S		saved CC
+	; 1,S		slot for new CC to return
 	; 0,S		saved bank
 	;
 	lda	2,S		; retrieve saved A
 	jsr	[,Y]		; call the subroutine
 	pshs	CC		; saved resulting CC
-	sta	2,S		; stash what we'll return in A
+	;
+	; 8,S		return address (lsb)
+	; 7,S		return address (msb)
+	; 6,S		saved Y (lsb)
+	; 5,S		saved Y (msb)
+	; 4,S		saved B
+	; 3,S		saved A
+	; 2,S		slot for new CC to return
+	; 1,S		saved bank
+	; 0,S		new CC to return
+	;
+	sta	3,S		; stash what we'll return in A
 	puls	A		; get resulting CC into A
+	;
+	; 7,S		return address (lsb)
+	; 6,S		return address (msb)
+	; 5,S		saved Y (lsb)
+	; 4,S		saved Y (msb)
+	; 3,S		saved B
+	; 2,S		saved A
+	; 1,S		slot for new CC to return
+	; 0,S		saved bank
+	;
 	sta	1,S		; save it in CC return slot
 	puls	A		; get saved bank
 	;
-	; 5,S		return address (lsb)
-	; 4,S		return address (msb)
-	; 3,S		saved Y (lsb)
-	; 2,S		saved Y (msb)
+	; 6,S		return address (lsb)
+	; 5,S		return address (msb)
+	; 4,S		saved Y (lsb)
+	; 3,S		saved Y (msb)
+	; 2,S		saved B
 	; 1,S		saved A
-	; 0,S		saved CC
+	; 0,S		new CC to return
 	;
 	bsr	brom_switch	; Switch to to saved bank
-	puls	CC,A,Y,PC	; Restore and return.
+	puls	CC,A,B,Y,PC	; Restore and return.
 
 ;
 ; panic
