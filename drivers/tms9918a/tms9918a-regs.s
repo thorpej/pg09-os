@@ -66,7 +66,7 @@
 VDP_R0			equ	0
 VDP_R0_EXTIN_EN		equ	$01	; external input enable
 VDP_R0_M3		equ	$02	; mode bit 3 (see mode table)
-VDP_R0_MODE_MASKOUT	equ	$FD
+VDP_R0_MODEMASK		equ	$02	; M3
 
 VDP_R1			equ	1
 VDP_R1_SPRITE_MAG	equ	$01	; 2x sprite magnification
@@ -77,7 +77,7 @@ VDP_R1_M1		equ	$10	; mode bit 1 (see mode table)
 VDP_R1_IE		equ	$20	; interrupt enable
 VDP_R1_SCREEN		equ	$40	; 0=screen blank, 1=screen active
 VDP_R1_16K		equ	$80	; 0=4K (4027s), 1=16K (4108s / 4116s)
-VDP_R1_MODE_MASKOUT	equ	$E3
+VDP_R1_MODEMASK		equ	$1B	; SPRITE_MAG+SPRITE_SIZE+M2+M1
 
 ;
 ; Commands mixed with the VRAM address when setting the internal pointer.
