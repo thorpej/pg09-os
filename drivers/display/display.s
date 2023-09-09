@@ -48,13 +48,29 @@
 ;	None.
 ;
 display_init
-	clr	display_count		; display_count = 0
+	pshs	D,X,Y		; save registers
+
+	clr	display_count	; display_count = 0
 	clr	display_default
-	dec	display_default		; display_default = -1
-	rts
+	dec	display_default	; display_default = -1
+
+	ldx	#display_desctab
+1	ldy	,X++		; look at next table slot
+	beq	2F		; 0? Done counting.
+	inc	display_count
+	jsr	[disp_init,Y]	; Initialize the display.
+	bra	1B		; keep counting
+
+2	; If there is only one display, then it is the default.
+	lda	display_count
+	cmpa	#1
+	bne	99F		; != 1, punt!
+	clr	display_default	; display_default = 0
+
+99	puls	D,X,Y,PC	; restore and return
 
 display_desctab
-	fdb	$0000			; NULL-terminate
+	fdb	$0000		; NULL-terminate
 
 ;
 ; display_get_count --

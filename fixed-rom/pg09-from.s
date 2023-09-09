@@ -213,8 +213,10 @@ cold_boot
 	lds	#KSTACK_TOP
 
 	;
-	; Initialize the console.
+	; Initialize the displays and console.
+	; N.B. The display subsystem must be enabled first!
 	;
+	jsr	display_init
 	jsr	cons_init
 
 	;

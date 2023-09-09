@@ -56,6 +56,7 @@ DISPLAY_TYPE_TMS9918A		equ	0
 ;    [lower address]
 ;
 ;	u8	DISPLAY_TYPE_* constant
+;	u16	init routine
 ;	u16	get-tty-info routine
 ;	u16	<first driver-specific routine>
 ;	.
@@ -65,7 +66,8 @@ DISPLAY_TYPE_TMS9918A		equ	0
 ;    [higher address]
 ; 
 disp_type			equ	0
-disp_get_tty_info		equ	(disp_type + 1)
+disp_init			equ	(disp_type + 1)
+disp_get_tty_info		equ	(disp_init + 1)
 disp_drvspec_first		equ	(disp_get_tty_info + 2)
 
 	endif	; display_conf_exp_included
