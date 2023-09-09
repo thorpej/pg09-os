@@ -273,6 +273,10 @@ cold_boot
 	include "../drivers/cons/cons_getline.s"
 	include "../drivers/display/display.s"
 	include "../drivers/w65c51/w65c51.s"
+	if CONFIG_DISPLAY_TMS9918A
+	include "../sys-api/tms9918a-api.exp"
+	include "../drivers/tms9918a/tms9918a-base.s"
+	endif
 
 ;
 ; brom_switch

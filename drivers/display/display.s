@@ -70,6 +70,9 @@ display_init
 99	puls	D,X,Y,PC	; restore and return
 
 display_desctab
+	if	CONFIG_DISPLAY_TMS9918A
+	fdb	tms9918a_display_descriptor
+	endif
 	fdb	$0000		; NULL-terminate
 
 ;

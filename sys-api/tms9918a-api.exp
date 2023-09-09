@@ -1,0 +1,371 @@
+;
+; Copyright (c) 2023 Jason R. Thorpe.
+; All rights reserved.
+;
+; Redistribution and use in source and binary forms, with or without
+; modification, are permitted provided that the following conditions
+; are met:
+; 1. Redistributions of source code must retain the above copyright
+;    notice, this list of conditions and the following disclaimer.
+; 2. Redistributions in binary form must reproduce the above copyright
+;    notice, this list of conditions and the following disclaimer in the
+;    documentation and/or other materials provided with the distribution.
+;
+; THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+; IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+; OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+; IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+; INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+; BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+; AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+; OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+; OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+; SUCH DAMAGE.
+;
+
+	if	tms9918a_api_exp_included
+	else
+tms9918a_api_exp_included	equ	1
+
+;
+; TMS9918-specific offsets in the display descriptor:
+;
+;	vdp_get_vram_addr	Get the VRAM address of the specified
+;				table.
+;
+;	vdp_mode_switch		Switch to the mode specified by the
+;				TMS9918 mode descriptor.
+;
+;	vdp_set_vsync_handler	Set the VSYNC handler.
+;
+;	vdp_set_address		Set the internal VRAM address pointer.
+;
+;	vdp_set_color		Set the COLOR register.
+;
+;	vdp_screen_enable	Enable the screen.
+;
+;	vdp_screen_disable	Disable the screen.
+;
+;	vdp_vram_put		Put a byte to VRAM.  The VRAM address
+;				pointer must already be set.
+;
+;	vdp_memset		Set a region of VRAM to a value.
+;
+;	vdp_copyin		Copy a buffer into VRAM.
+;
+;	vdp_nt_copyin
+;	vdp_ct_copyin
+;	vdp_pt_copyin
+;	vdp_sat_copyin
+;	vdp_spt_copyin		Copy a buffer to an offset in  the specified
+;				table in VRAM (Name Table, Color Table,
+;				Pattern Table, Sprite Attribute Table,
+;				Sprite Pattern Table).
+;
+
+; Arguments to vdp_get_vram_addr().
+TMS9918_VRAM_ADDR_NT		equ	0
+TMS9918_VRAM_ADDR_CT		equ	1
+TMS9918_VRAM_ADDR_PT		equ	2
+TMS9918_VRAM_ADDR_SAT		equ	3
+TMS9918_VRAM_ADDR_SPT		equ	4
+
+vdp_get_vram_addr		equ	disp_drvspec_first
+vdp_mode_switch			equ	(vdp_get_vram_addr + 2)
+vdp_set_vsync_handler		equ	(vdp_mode_switch + 2)
+vdp_set_address			equ	(vdp_set_vsync_handler + 2)
+vdp_set_color			equ	(vdp_set_address + 2)
+vdp_screen_enable		equ	(vdp_set_color + 2)
+vdp_screen_disable		equ	(vdp_screen_enable + 2)
+vdp_vram_put			equ	(vdp_screen_disable + 2)
+vdp_memset			equ	(vdp_vram_put + 2)
+vdp_copyin			equ	(vdp_memset + 2)
+vdp_nt_copyin			equ	(vdp_copyin + 2)
+vdp_ct_copyin			equ	(vdp_nt_copyin + 2)
+vdp_pt_copyin			equ	(vdp_ct_copyin + 2)
+vdp_sat_copyin			equ	(vdp_pt_copyin + 2)
+vdp_spt_copyin			equ	(vdp_sat_copyin + 2)
+
+;
+; There is only one CPU address line connected to the TMS9918, "MODE",
+; which is typically tied to the low-order address line of the CPU.  All
+; access to TMS9918 registers is indirect using some combination of MODE=0
+; and MODE=1.
+;
+; The steps, from Table 2-1 of the TMS9918 manual.  Note that the bit
+; numbers are reversed in the manual from the normal convention (bit 7
+; is the LSB).
+;
+; CPU write to VDP register:
+; 1. MODE1 <- data byte
+; 2. MODE1 <- 0x80 | reg
+;
+; CPU write to VRAM:
+; 1. MODE1 <- addrL
+; 2. MODE1 <- 0x40 | addrH		N.B. 2 MSB of addrH MBZ!
+; 3. MODE0 <- data byte
+;    [addr auto-increments]
+;    MODE0 <- data byte
+;    ...
+;
+; CPU read from VDP register:
+; 1. MODE1 -> data byte
+;
+; CPU read from VRAM:
+; 1. MODE1 <- addrL
+; 2. MODE1 <- addrH			N.B. 2 MSB of addrH MBZ!
+; 3. MODE0 -> data byte
+;    [addr auto-increments]
+;    MODE0 -> data byte
+;    ...
+; Note that reads from VRAM are *extremely* slow.  See section 2.1.5 of
+; the TMS9918 manual for details.
+;
+
+;
+; Write-only configuration registers.
+;
+VDP_R0			equ	0
+VDP_R0_EXTIN_EN		equ	$01	; external input enable
+VDP_R0_M3		equ	$02	; mode bit 3 (see mode table)
+VDP_R0_MODEMASK		equ	$02	; M3
+
+VDP_R1			equ	1
+VDP_R1_SPRITE_MAG	equ	$01	; 2x sprite magnification
+VDP_R1_SPRITE_SIZE	equ	$02	; 0=8x8, 1=16x16
+;				$04	  must be zero
+VDP_R1_M2		equ	$08	; mode bit 2 (see mode table)
+VDP_R1_M1		equ	$10	; mode bit 1 (see mode table)
+VDP_R1_IE		equ	$20	; interrupt enable
+VDP_R1_SCREEN		equ	$40	; 0=screen blank, 1=screen active
+VDP_R1_16K		equ	$80	; 0=4K (4027s), 1=16K (4108s / 4116s)
+VDP_R1_MODEMASK		equ	$1B	; SPRITE_MAG+SPRITE_SIZE+M2+M1
+
+;
+; Commands mixed with the VRAM address when setting the internal pointer.
+; These are passed to vdp_set_address().
+;
+VDP_VRAM_READ		equ	$00
+VDP_VRAM_WRITE		equ	$40
+
+;
+; Command mixed with the register number when performing a register write.
+;
+VDP_REG_WRITE		equ	$80
+
+;
+; VIDEO MODES
+;
+; 	M1	M2	M3
+;	0	0	0	Graphics I
+;	0	0	1	Graphics II
+;	0	1	0	Multicolor
+;	1	0	0	Text
+;
+
+; Name Table Base Address -- 4 MSB MBZ!
+;
+;  |  REGISTER 2   |
+;   0 0 0 0 x x x x 0 0 0 0 0 0 0 0 0 0
+;          |   14-bit VDP address      |
+;
+VDP_NTBA		equ	2
+	; Name table at NTBA * 0x400 (a.k.a. NTBA << 10)
+VDP_NTBA_SHIFT		equ	10
+
+; Color Table Base Address
+;
+;  |  REGISTER 3   |
+;   x x x x x x x x 0 0 0 0 0 0
+;  |    14-bit VDP address     |
+;
+VDP_CTBA		equ	3
+	; Color table at CTBA * 0x40 (a.k.a. CTBA << 6)
+VDP_CTBA_SHIFT		equ	6
+
+; Pattern Generator Base Address - 5 MSB MBZ!
+;
+;  |  REGISTER 4   |
+;   0 0 0 0 0 x x x 0 0 0 0 0 0 0 0 0 0 0
+;            |    14-bit VDP address     |
+;
+VDP_PGBA		equ	4
+	; Pattern Generator table at PGBA * 0x800 (a.k.a. PGBA << 11)
+VDP_PGBA_SHIFT		equ	11
+
+; Sprite Attribute Table Base Address - 1 MSB MBZ!
+;
+;  |  REGISTER 5   |
+;   0 x x x x x x x 0 0 0 0 0 0 0
+;    |    14-bit VDP address     |
+;
+VDP_SATBA		equ	5
+	; Sprite Attribute table at SATBA * 0x80 (a.k.a. SATBA << 7)
+VDP_SATBA_SHIFT		equ	7
+
+; Sprite Pattern Generator Base Address - 5 MSB MBZ!
+;
+;  |  REGISTER 6   |
+;   0 0 0 0 0 x x x 0 0 0 0 0 0 0 0 0 0 0
+;            |    14-bit VDP address     |
+;
+VDP_SPGBA		equ	6
+	; Sprite Pattern Generator table at SPGBA * 0x800 (e.k.a. SPGBA << 11)
+VDP_SPGBA_SHIFT		equ	11
+
+; Text Color
+; 4 MSB -- text color1
+; 4 LSB -- text color0 / backdrop color
+VDP_COLOR		equ	7
+
+; Status register:
+VDP_STS_5S_NUM		equ	$1f	; fifth sprite number
+VDP_STS_C		equ	$20	; sprite coincidence
+VDP_STS_5S		equ	$40	; fifth sprite
+VDP_STS_F		equ	$80	; interrupt flag
+
+; Color codes
+VDP_COLOR_TRANS		equ	0	; transparent
+VDP_COLOR_BLACK		equ	1
+VDP_COLOR_MED_GREEN	equ	2
+VDP_COLOR_LT_GREEN	equ	3
+VDP_COLOR_DK_BLUE	equ	4
+VDP_COLOR_LT_BLUE	equ	5
+VDP_COLOR_DK_RED	equ	6
+VDP_COLOR_CYAN		equ	7
+VDP_COLOR_MED_RED	equ	8
+VDP_COLOR_LT_RED	equ	9
+VDP_COLOR_DK_YELLOW	equ	10
+VDP_COLOR_LT_YELLOW	equ	11
+VDP_COLOR_DK_GREEN	equ	12
+VDP_COLOR_MAGENTA	equ	13
+VDP_COLOR_GRAY		equ	14
+VDP_COLOR_WHITE		equ	15
+
+;
+; Exported definitions related to settings modes on the TMS9918.
+;
+
+;
+; The TMS9918 driver uses a "mode descriptor" passed in from a
+; client application to set the mode.
+;
+;    [lower address]
+;
+;	u8	R0 mode bits
+;	u8	R1 mode bits
+;	u8	R2 (NTBA register value)
+;	u8	R3 (CTBA register value)
+;	u8	R4 (PGBA register value)
+;	u8	R5 (SATBA register value)
+;	u8	R6 (SPGBA register value)
+;	u8	R7 (color)
+;	u16	Name Table Base Address (full 14-bit value)
+;	u16	Color Table Base Address (full 14-bit value)
+;	u16	Pattern Generator Base Address (full 14-bit value)
+;	u16	Sprite Attribute Table Base Address (full 14-bit value)
+;	u16	Sprite Pattern Generator Base Address (full 14-bit value)
+;
+;    [higher address]
+;
+; Normally, the values of R2 - R6 are trivial to compute by simply
+; using the corresponding Base Address values and shifting right by
+; the appropriate constant (from tms9918-regs.s), but there are some
+; notable exceptions (Graphics Mode 2 -- RTFM).
+; 
+; The mode switch routine will not modify the incoming mode descriptor,
+; so it may be ROM-resident, if desired.
+;
+vdp_md_r0		equ	0
+vdp_md_r1		equ	vdp_md_r0+1
+vdp_md_r2		equ	vdp_md_r1+1
+vdp_md_r3		equ	vdp_md_r2+1
+vdp_md_r4		equ	vdp_md_r3+1
+vdp_md_r5		equ	vdp_md_r4+1
+vdp_md_r6		equ	vdp_md_r5+1
+vdp_md_r7		equ	vdp_md_r6+1
+vdp_md_ntba		equ	vdp_md_r7+1
+vdp_md_ctba		equ	vdp_md_ntba+2
+vdp_md_pgba		equ	vdp_md_ctba+2
+vdp_md_satba		equ	vdp_md_pgba+2
+vdp_md_spgba		equ	vdp_md_satba+2
+vdp_md_descsize		equ	vdp_md_spgba+2
+
+;
+; Default definitions for Graphics 1 mode.  These come from Figure 6-2
+; of the 1984 "Video Display Processors Programmer's Guide".
+;
+VDP_G1_NTBA_DEFAULT	equ	$1400
+VDP_G1_CTBA_DEFAULT	equ	$2000
+VDP_G1_PGBA_DEFAULT	equ	$0800
+VDP_G1_SATBA_DEFAULT	equ	$1000
+VDP_G1_SPGBA_DEFAULT	equ	$0000
+
+VDP_G1_R0		equ	0
+VDP_G1_R1		equ	0
+VDP_G1_R2_DEFAULT	equ	(VDP_G1_NTBA_DEFAULT >> VDP_NTBA_SHIFT)
+VDP_G1_R3_DEFAULT	equ	(VDP_G1_CTBA_DEFAULT >> VDP_CTBA_SHIFT)
+VDP_G1_R4_DEFAULT	equ	(VDP_G1_PGBA_DEFAULT >> VDP_PGBA_SHIFT)
+VDP_G1_R5_DEFAULT	equ	(VDP_G1_SATBA_DEFAULT >> VDP_SATBA_SHIFT)
+VDP_G1_R6_DEFAULT	equ	(VDP_G1_SPGBA_DEFAULT >> VDP_SPGBA_SHIFT)
+VDP_G1_R7_DEFAULT	equ	VDP_COLOR_BLACK
+
+;
+; Default definitions for Graphics 2 mode.  These come from Figure 6-3
+; of the 1984 "Video Display Processors Programmer's Guide".
+;
+VDP_G2_NTBA_DEFAULT	equ	$3800
+VDP_G2_CTBA_DEFAULT	equ	$2000
+VDP_G2_PGBA_DEFAULT	equ	$0000
+VDP_G2_SATBA_DEFAULT	equ	$3B00
+VDP_G2_SPGBA_DEFAULT	equ	$1800
+
+VDP_G2_R0		equ	VDP_R0_M3
+VDP_G2_R1		equ	0
+VDP_G2_R2_DEFAULT	equ	(VDP_G2_NTBA_DEFAULT >> VDP_NTBA_SHIFT)
+VDP_G2_R3_DEFAULT	equ	$FF	; RTFM
+VDP_G2_R4_DEFAULT	equ	$03	; RTFM
+VDP_G2_R5_DEFAULT	equ	(VDP_G2_SATBA_DEFAULT >> VDP_SATBA_SHIFT)
+VDP_G2_R6_DEFAULT	equ	(VDP_G2_SPGBA_DEFAULT >> VDP_SPGBA_SHIFT)
+VDP_G2_R7_DEFAULT	equ	VDP_COLOR_BLACK
+
+;
+; Default definitions for Multicolor mode.  These come from Figure 6-4
+; of the 1984 "Video Display Processors Programmer's Guide".
+;
+VDP_MC_NTBA_DEFAULT	equ	$1400
+VDP_MC_CTBA_DEFAULT	equ	$0000	; Don't care in MC mode
+VDP_MC_PGBA_DEFAULT	equ	$0800
+VDP_MC_SATBA_DEFAULT	equ	$1000
+VDP_MC_SPGBA_DEFAULT	equ	$0000
+
+VDP_MC_R0		equ	0
+VDP_MC_R1		equ	VDP_R1_M2
+VDP_MC_R2_DEFAULT	equ	(VDP_MC_NTBA_DEFAULT >> VDP_NTBA_SHIFT)
+VDP_MC_R3_DEFAULT	equ	(VDP_MC_CTBA_DEFAULT >> VDP_CTBA_SHIFT)
+VDP_MC_R4_DEFAULT	equ	(VDP_MC_PGBA_DEFAULT >> VDP_PGBA_SHIFT)
+VDP_MC_R5_DEFAULT	equ	(VDP_MC_SATBA_DEFAULT >> VDP_SATBA_SHIFT)
+VDP_MC_R6_DEFAULT	equ	(VDP_MC_SPGBA_DEFAULT >> VDP_SPGBA_SHIFT)
+VDP_MC_R7_DEFAULT	equ	VDP_COLOR_BLACK
+
+;
+; Default definitions for Text mode.  These come from Figure 6-5
+; of the 1984 "Video Display Processors Programmer's Guide".
+;
+VDP_TXT_NTBA_DEFAULT	equ	$0800
+VDP_TXT_CTBA_DEFAULT	equ	$0000	; Don't care in Text mode
+VDP_TXT_PGBA_DEFAULT	equ	$0000
+VDP_TXT_SATBA_DEFAULT	equ	$0000	; Don't care in Text mode
+VDP_TXT_SPGBA_DEFAULT	equ	$0000	; Don't care in Text mode
+
+VDP_TXT_R0		equ	0
+VDP_TXT_R1		equ	VDP_R1_M1
+VDP_TXT_R2_DEFAULT	equ	(VDP_TXT_NTBA_DEFAULT >> VDP_NTBA_SHIFT)
+VDP_TXT_R3_DEFAULT	equ	(VDP_TXT_CTBA_DEFAULT >> VDP_CTBA_SHIFT)
+VDP_TXT_R4_DEFAULT	equ	(VDP_TXT_PGBA_DEFAULT >> VDP_PGBA_SHIFT)
+VDP_TXT_R5_DEFAULT	equ	(VDP_TXT_SATBA_DEFAULT >> VDP_SATBA_SHIFT)
+VDP_TXT_R6_DEFAULT	equ	(VDP_TXT_SPGBA_DEFAULT >> VDP_SPGBA_SHIFT)
+VDP_TXT_R7_DEFAULT	equ	(VDP_COLOR_WHITE << 4)+VDP_COLOR_LT_BLUE
+
+	endif	; tms9918a_api_exp_included

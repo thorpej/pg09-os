@@ -6,8 +6,10 @@ FRAM_DEPS=	$(ASMDEPS) pg09-fram.s
 
 all: $(EXP_IMAGES)
 
-pg09-fram.exp: $(FRAM_DEPS)
-	asm6809 -l pg09-fram.lst -E $@ pg09-fram.s
+CONFIGFLAGS+=	-d CONFIG_DISPLAY_TMS9918A=1
+
+pg09-fram.exp: $(FRAM_DEPS) Makefile
+	asm6809 $(CONFIGFLAGS) -l pg09-fram.lst -E $@ pg09-fram.s
 	sort < $@ > $(@).tmp && mv $(@).tmp $@
 
 clean:

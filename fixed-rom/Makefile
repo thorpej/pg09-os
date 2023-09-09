@@ -11,6 +11,8 @@ ASMDEPS=	../../pg09-system/asm/pg09_defs.s			\
 
 FROM_DEPS=	$(ASMDEPS) pg09-from.s
 
+CONFIGFLAGS+=	-d CONFIG_DISPLAY_TMS9918A=1
+
 all: $(ROM_IMAGES)
 
 .PHONY: ../fixed-ram/pg09-fram.exp
@@ -25,8 +27,9 @@ build_date.s:
 sys-api:
 	sh ./gen-sysapi.sh pg09-from.sym ../sys-api/pg09-os.exp
 
-pg09-from.bin: build_date.s $(FROM_DEPS)
-	asm6809 -l pg09-from.lst -s pg09-from.sym -o $@ pg09-from.s
+pg09-from.bin: Makefile build_date.s $(FROM_DEPS)
+	asm6809 $(CONFIGFLAGS) -l pg09-from.lst -s pg09-from.sym \
+	    -o $@ pg09-from.s
 	$(MAKE) sys-api
 
 clean_fram:

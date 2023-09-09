@@ -29,6 +29,45 @@
 ;
 
 ;
+; Display descriptor for the TMS9918.
+;
+tms9918a_display_descriptor
+	fcc	DISPLAY_TYPE_TMS9918A	; generic field
+	fdb	VDP_init		; generic field
+	fdb	VDP_get_tty_info	; generic field
+	fdb	VDP_get_vram_addr	; driver-specific fields start here
+	fdb	VDP_mode_switch
+	fdb	VDP_set_vsync_handler
+	fdb	VDP_set_address
+	fdb	VDP_set_color
+	fdb	VDP_screen_enable
+	fdb	VDP_screen_disable
+	fdb	VDP_vram_put
+	fdb	VDP_memset
+	fdb	VDP_copyin
+	fdb	VDP_nt_copyin
+	fdb	VDP_ct_copyin
+	fdb	VDP_pt_copyin
+	fdb	VDP_sat_copyin
+	fdb	VDP_spt_copyin
+
+; Default to text mode
+VDP_default_mode_desc
+	fcc	VDP_TXT_R0
+	fcc	VDP_TXT_R1
+	fcc	VDP_TXT_R2_DEFAULT
+	fcc	VDP_TXT_R3_DEFAULT
+	fcc	VDP_TXT_R4_DEFAULT
+	fcc	VDP_TXT_R5_DEFAULT
+	fcc	VDP_TXT_R6_DEFAULT
+	fcc	VDP_TXT_R7_DEFAULT
+	fdb	VDP_TXT_NTBA_DEFAULT
+	fdb	VDP_TXT_CTBA_DEFAULT
+	fdb	VDP_TXT_PGBA_DEFAULT
+	fdb	VDP_TXT_SATBA_DEFAULT
+	fdb	VDP_TXT_SPGBA_DEFAULT
+
+;
 ; VDP_init
 ;	Basic initialization of the VDP driver and chip.
 ;
@@ -64,7 +103,7 @@ VDP_init
 
 	; Load the default config.
 	ldx	#VDP_default_mode_desc
-	bsr	VDP_load_config
+	lbsr	VDP_mode_switch
 
 	; Clear out VRAM.
 	ldx	#0		; VRAM address
@@ -75,6 +114,50 @@ VDP_init
 	; XXX interrupts, bruh
 
 	puls	X,Y,PC		; restore and return
+
+;
+; VDP_get_tty_info
+;	Get the TTY info array for the VDP.
+;
+; Arguments --
+;	None.
+;
+; Returns --
+;	A - number of entries in array
+;	X - pointer to array, $0000 if none
+;
+; Clobbers --
+;	None.
+;
+VDP_get_tty_info
+	clra		; none, for now.
+	ldx	#0
+	rts
+
+;
+; VDP_get_vram_addr
+;	Get the VRAM address for the specified table.
+;
+; Arguments --
+;	A - TMS9918_VRAM_ADDR_* constant specifying the table
+;
+; Returns --
+;	X - VRAM address of the specified table.  If the table is
+;	unknown, we just return $0000.
+;
+; Clobbers --
+;	A
+;
+VDP_get_vram_addr
+	cmpa	#TMS9918_VRAM_ADDR_SPT
+	bls	1F	; valid table specifier
+	ldx	#0	; return NULL bogus table
+	rts
+
+1	asla		; index to table offset
+	ldx	#VDP_Name_Table ; pointer to first VRAM addr var
+	ldx	A,X	; X = value in var array
+	rts
 
 ;
 ; VDP_vsync_handler_default
@@ -116,7 +199,7 @@ VDP_set_vsync_handler
 ;	with the 60Hz timer.
 ;
 VDP_intr
-	jsr	[VDP_vsync_intr_handler]
+	jsr	[VDP_vsync_handler]
 
 	; XXX timer stuff
 

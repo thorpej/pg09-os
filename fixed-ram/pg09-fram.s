@@ -67,6 +67,9 @@ can_continue	rmb	1
 ; Pull in RAM variables used by various device drivers.
 ;
 	include "../drivers/display/display-ramvars.s"
+	if CONFIG_DISPLAY_TMS9918A
+	include "../drivers/tms9918a/tms9918a-ramvars.s"
+	endif
 
 ; Put the monitor's interrupt frame at the top of FRAM.  This
 ; interrupt frame has an extra 2 bytes at the top that point
