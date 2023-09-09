@@ -37,6 +37,8 @@
 	include "../fixed-ram/pg09-fram.exp"
 
 	include "../sys-api/pg09-os.exp"
+	include "../sys-api/display-api.exp"
+
 	include "../banked-rom0/pg09-brom0.exp"
 
 	setdp	-1	; Disable automatic direct page addressing
@@ -68,6 +70,10 @@ SysSubr_\1	fdb	\1
 	SysSubr cons_pollc
 	SysSubr cons_putc
 	SysSubr cons_getline
+
+	SysSubr display_get_count
+	SysSubr display_get_default
+	SysSubr display_get_descriptor
 
 	;
 	; System ADDRESS equates.  These are the exported names of
@@ -263,6 +269,7 @@ cold_boot
 	;
 	include "../drivers/cons/cons.s"
 	include "../drivers/cons/cons_getline.s"
+	include "../drivers/display/display.s"
 	include "../drivers/w65c51/w65c51.s"
 
 ;
