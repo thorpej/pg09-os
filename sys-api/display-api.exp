@@ -24,9 +24,9 @@
 ; SUCH DAMAGE.
 ;
 
-	if	display_conf_exp_included
+	if	display_api_exp_included
 	else
-display_conf_exp_included	equ	1
+display_api_exp_included	equ	1
 
 ;
 ; Exports related to display configuration for the 6809 Playground.
@@ -70,4 +70,4 @@ disp_init			equ	(disp_type + 1)
 disp_get_tty_info		equ	(disp_init + 1)
 disp_drvspec_first		equ	(disp_get_tty_info + 2)
 
-	endif	; display_conf_exp_included
+	endif	; display_api_exp_included
