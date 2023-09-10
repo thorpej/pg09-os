@@ -154,6 +154,13 @@ VDP_get_tty_info
 VDP_acquire
 	tst	VDP_acquired	; already busy?
 	bne	99F		; yes, get out
+
+	lbsr	VDP_screen_disable ; disable the screen
+	pshs	X
+	ldx	#$0000		; clear existing VSYNC handler
+	bsr	VDP_set_vsync_handler
+	puls	X
+
 	inc	VDP_acquired	; set acquired flag, 0 -> 1 clears CC_Z
 	rts
 
