@@ -267,6 +267,7 @@ VDP_set_vsync_handler
 ;
 VDP_intr
 	jsr	[VDP_vsync_handler]
+	lda	VDP_REG_MODE1	; ensure the interrupt status is cleared
 
 	; XXX timer stuff
 
