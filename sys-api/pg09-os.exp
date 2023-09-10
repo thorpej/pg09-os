@@ -45,9 +45,11 @@ SysSubr_cons_getc equ 57354
 SysSubr_cons_getline equ 57360
 SysSubr_cons_pollc equ 57356
 SysSubr_cons_putc equ 57358
+SysSubr_display_acquire equ 57368
 SysSubr_display_get_count equ 57362
 SysSubr_display_get_default equ 57364
 SysSubr_display_get_descriptor equ 57366
+SysSubr_display_release equ 57370
 SysSubr_exit equ 57344
 SysSubr_hbram_switch equ 57352
 SysSubr_lbram_switch equ 57350

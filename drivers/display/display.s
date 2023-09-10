@@ -135,3 +135,43 @@ display_get_descriptor
 	ldx	#display_desctab ; X = address of display descriptor table
 	ldx	A,X		 ; X = pointer to descriptor from table
 	puls	A,PC		 ; restore and return
+
+;
+; display_acquire --
+;	Acquire a display device for use by an application.
+;
+; Arguments --
+;	A - display index
+;
+; Returns --
+;	Z flag is cleared if successful, set if not successful.
+;
+; Clobbers --
+;	None.
+;
+display_acquire
+	pshs	X		; save registers
+	bsr	display_get_descriptor
+	beq	99F		; get out if NULL
+	jsr	[disp_acquire,X] ; call the acquire routine
+99	puls	X,PC		; restore and return
+
+;
+; display_release --
+;	Release a display that's been in use by an application.
+;
+; Arguments --
+;	A - display index
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+display_release
+	pshs	X		; save registers
+	bsr	display_get_descriptor
+	beq	99F		; get out if NULL
+	jsr	[disp_release,X] ; call the release routine
+99	puls	X,PC		; restore and return

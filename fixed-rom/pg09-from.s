@@ -74,6 +74,8 @@ SysSubr_\1	fdb	\1
 	SysSubr display_get_count
 	SysSubr display_get_default
 	SysSubr display_get_descriptor
+	SysSubr display_acquire
+	SysSubr display_release
 
 	;
 	; System ADDRESS equates.  These are the exported names of

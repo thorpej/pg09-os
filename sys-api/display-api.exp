@@ -39,6 +39,8 @@ display_api_exp_included	equ	1
 ;	SysSubr_display_get_count
 ;	SysSubr_display_get_default
 ;	SysSubr_display_get_descriptor
+;	SysSubr_display_acquire
+;	SysSubr_display_release
 ;
 
 ; Display type constants.
@@ -58,6 +60,8 @@ DISPLAY_TYPE_TMS9918A		equ	0
 ;	u8	DISPLAY_TYPE_* constant
 ;	u16	init routine
 ;	u16	get-tty-info routine
+;	u16	acquire routine
+;	u16	release routine
 ;	u16	<first driver-specific routine>
 ;	.
 ;	.
@@ -67,7 +71,9 @@ DISPLAY_TYPE_TMS9918A		equ	0
 ; 
 disp_type			equ	0
 disp_init			equ	(disp_type + 1)
-disp_get_tty_info		equ	(disp_init + 1)
-disp_drvspec_first		equ	(disp_get_tty_info + 2)
+disp_get_tty_info		equ	(disp_init + 2)
+disp_acquire			equ	(disp_get_tty_info + 2)
+disp_release			equ	(disp_acquire + 2)
+disp_drvspec_first		equ	(disp_release + 2)
 
 	endif	; display_api_exp_included
