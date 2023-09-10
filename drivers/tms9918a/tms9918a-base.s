@@ -32,24 +32,32 @@
 ; Display descriptor for the TMS9918.
 ;
 tms9918a_display_descriptor
-	fcc	DISPLAY_TYPE_TMS9918A	; generic field
-	fdb	VDP_init		; generic field
-	fdb	VDP_get_tty_info	; generic field
-	fdb	VDP_get_vram_addr	; driver-specific fields start here
-	fdb	VDP_mode_switch
-	fdb	VDP_set_vsync_handler
-	fdb	VDP_set_address
-	fdb	VDP_set_color
-	fdb	VDP_screen_enable
-	fdb	VDP_screen_disable
-	fdb	VDP_vram_put
-	fdb	VDP_memset
-	fdb	VDP_copyin
-	fdb	VDP_nt_copyin
-	fdb	VDP_ct_copyin
-	fdb	VDP_pt_copyin
-	fdb	VDP_sat_copyin
-	fdb	VDP_spt_copyin
+	;
+	; generic fields start here
+	;
+	fcc	DISPLAY_TYPE_TMS9918A
+	fdb	VDP_init
+	fdb	VDP_get_tty_info
+	fdb	VDP_acquire
+	fdb	VDP_release
+	;
+	; driver-specific fields start here
+	;
+	fdb	VDP_get_vram_addr	; get VRAM address for table
+	fdb	VDP_get_status		; get STATUS register
+	fdb	VDP_set_mode		; set video mode
+	fdb	VDP_set_vsync_handler	; set VSYNC handler
+	fdb	VDP_set_address		; set VRAM write pointer
+	fdb	VDP_set_color		; set COLOR register
+	fdb	VDP_set_register	; set arbitrary register
+	fdb	VDP_screen_enable	; enable the screen
+	fdb	VDP_screen_disable	; disable the screen
+	fdb	VDP_vram_put		; put a byte to VRAM
+	fdb	VDP_clear		; clear all of VRAM
+	fdb	VDP_memset		; set a region of VRAM to a value
+	fdb	VDP_copyin		; copy data to VRAM
+	fdb	VDP_copyin_inv		; copy inverted data to VRAM
+	fdb	VDP_load_tiles		; load tile data
 
 ; Default to text mode
 VDP_default_mode_desc
@@ -95,21 +103,17 @@ VDP_init
 	;
 	ldx	#VDP_reg_r0+1	; First address (2nd byte of R0's slot)
 	lda	#VDP_REG_WRITE	; value to store
-	ldb	8		; count
 1	sta	,X++		; store value, advance to next slot
 	inca			; next register index
-	decb			; decrement count
+	cmpa	#VDP_REG_WRITE+8
 	bne	1B		; continue if not done
 
 	; Load the default config.
 	ldx	#VDP_default_mode_desc
-	lbsr	VDP_mode_switch
+	lbsr	VDP_set_mode
 
 	; Clear out VRAM.
-	ldx	#0		; VRAM address
-	ldy	#16384		; length
-	clra			; value to set
-	bsr	VDP_memset
+	lbsr	VDP_clear
 
 	; XXX interrupts, bruh
 
@@ -135,6 +139,45 @@ VDP_get_tty_info
 	rts
 
 ;
+; VDP_acquire
+;	Acquire the VDP for an application.
+;
+; Arguments --
+;	None.
+;
+; Returns --
+;	Z flag is cleared if acquisition succeeded, set if failed.
+;
+; Clobbers --
+;	None.
+;
+VDP_acquire
+	tst	VDP_acquired	; already busy?
+	bne	99F		; yes, get out
+	inc	VDP_acquired	; set acquired flag, 0 -> 1 clears CC_Z
+	rts
+
+99	orcc	#CC_Z		; Z set -> acquisition failed
+	rts
+
+;
+; VDP_release
+;	Release the VDP from an application's use.
+;
+; Arguments --
+;	None.
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+VDP_release
+	clr	VDP_acquired	; just clear the flag unconditionally
+	rts
+
+;
 ; VDP_get_vram_addr
 ;	Get the VRAM address for the specified table.
 ;
@@ -157,6 +200,23 @@ VDP_get_vram_addr
 1	asla		; index to table offset
 	ldx	#VDP_Name_Table ; pointer to first VRAM addr var
 	ldx	A,X	; X = value in var array
+	rts
+
+;
+; VDP_get_status
+;	Get the VDP status register.
+;
+; Arguments --
+;	None.
+;
+; Returns --
+;	A - status register value
+;
+; Clobbers --
+;	None.
+;
+VDP_get_status
+	lda	VDP_REG_MODE1
 	rts
 
 ;
@@ -207,11 +267,10 @@ VDP_intr
 
 ;
 ; VDP_set_address
-;	Set the VRAM address.
+;	Set the VRAM write pointer.
 ;
 ; Arguments --
-;	A - read or write command
-;	X - VRAM address
+;	D - VRAM address
 ;
 ; Returns --
 ;	None.
@@ -220,17 +279,12 @@ VDP_intr
 ;	None.
 ;
 VDP_set_address
-	pshs	A,B		; save registers
-	;
-	; 1,S	saved B
-	; 0,S	saved A (and also command)
-	;
-	tfr	X,D		; get address into D
-	stb	VDP_REG_MODE1	; MODE1 <- addrL
+	pshs	A		; save registers
 	anda	#$3F		; make sure addrH is tidy
-	ora	0,S		; add in command bit
+	ora	#VDP_VRAM_WRITE	; set command bit
+	stb	VDP_REG_MODE1	; MODE1 <- addrL
 	sta	VDP_REG_MODE1	; MODE1 <- addrH + cmd
-	puls	A,B,PC		; restore and return
+	puls	A,PC		; restore and return
 
 ;
 ; VDP_vram_put
@@ -252,16 +306,38 @@ VDP_vram_put
 	rts
 
 ;
+; VDP_clear
+;	Clear all of VRAM.
+;
+; Arguments --
+;	None.
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+VDP_clear
+	pshs	D,Y		; save registers
+	M_clrd			; VRAM address = $0000
+	bsr	VDP_set_address
+				; A is alreaady 0
+	ldy	#16384		; length
+	bsr	VDP_memset
+	puls	D,Y,PC		; restore and return
+
+;
 ; VDP_memset
-;	Set a region of VRAM to a value.
+;	Set a region of VRAM to a value.  The VRAM address must already
+;	be set.
 ;
 ;	If you're not doing this in the blanking interval, you
 ;	should be doing it with the screen disabled.
 ;
 ; Arguments --
-;	X - the VRAM address
-;	Y - the length
 ;	A - the value to set
+;	Y - the length
 ;
 ; Returns --
 ;	None.
@@ -273,149 +349,124 @@ VDP_vram_put
 ;	We assume that we've been called with length > 0 and <= 16384.
 ;
 VDP_memset
-	pshs	A,B,Y		; save registers
-	lda	#VDP_VRAM_WRITE
-	bsr	VDP_set_address	; set write pointer in VDP
-	puls	A		; pop A off stack
+	pshs	Y		; save registers
 1	bsr	VDP_vram_put	; go put a byte
 	leay	-1,Y		; decrement Y
 	bne	1B		; not 0, go do more work
-	puls	B,Y		; restore and return
+	puls	Y		; restore and return
 
 ;
 ; VDP_copyin
-;	Copy data into VRAM.
+;	Copy data into VRAM.  The VRAM address must already be set.
 ;
 ; Arguments --
-;	X - VRAM destination address
-;	Y - source buffer
-;	D - length
+;	X - source buffer
+;	Y - length
 ;
 ; Returns --
 ;	None.
 ;
 ; Clobbers --
-;	X, Y
+;	X - will point to the byte following the source buffer
 ;
 ; Notes --
 ;	We assume that we've been called with length > 0 and <= 16384.
 ;
 VDP_copyin
-	pshs	D		; push length onto stack
-VDP_copyin_common
-	lda	#VDP_VRAM_WRITE	; write command
-	bsr	VDP_set_address	; set the VRAM address
-	ldx	0,S		; length into X
-1	lda	,Y+		; get byte from source buffer
+	pshs	A,Y		; save registers
+1	lda	,X+		; get byte from source buffer
 	bsr	VDP_vram_put	; put it into VRAM
-	leax	-1,X		; decrement X
-	bne	1B		; not 0, go do more work
-2	puls	D,PC		; restore and return
+	leay	-1,Y		; decrement length
+	bne	1B		; != 0, go do more work
+	puls	A,Y,PC		; restore and return
 
 ;
-; VDP_nt_copyin
-;	Convenience routine that copies data to the Name Table.
+; VDP_copyin_inv
+;	Copy data into VRAM, inverting each byte that is copied.
+;	The VRAM address must already be set.
 ;
 ; Arguments --
-;	X - Name Table offset
-;	Y - source buffer
-;	D - length
+;	X - source buffer
+;	Y - length
 ;
 ; Returns --
 ;	None.
 ;
 ; Clobbers --
-;	X, Y
+;	X - will point to the byte following the source buffer
 ;
-VDP_nt_copyin
-	pshs	D		; push length onto stack
-	ldd	VDP_Name_Table	; D = VRAM address of Name Table
-	leax	D,X		; compute absolute VRAM address
-	bra	VDP_copyin_common
+; Notes --
+;	We assume that we've been called with length > 0 and <= 16384.
+;
+VDP_copyin_inv
+	pshs	A,Y		; save registers
+1	lda	,X+		; get byte from source buffer
+	coma			; invert it
+	bsr	VDP_vram_put	; put it into VRAM
+	leay	-1,Y		; decrement length
+	bne	1B		; != 0, go do more work
+	puls	A,Y,PC		; restore and return
 
 ;
-; VDP_ct_copyin
-;	Convenience routine that copies data to the Color Table.
+; VDP_load_tiles
+;	Load the pattern table in a sparse fashion.  This is
+;	particularly useful for loading ASCII font data or
+;	hot-patching sprite tiles.
 ;
 ; Arguments --
-;	X - Color Table offset
-;	Y - source buffer
-;	D - length
+;	X - sparse tile data
+;	Y - pattern table base address
+;	A - pattern count (0 == 256)
+;
+;	The sparse tile data is like so:
+;
+;	fcc	$20		; tile number
+;	fcc	%00000000	; 8 bytes of tile data
+;	.
+;	.
+;	.
+;	fcc	%00000000
 ;
 ; Returns --
 ;	None.
 ;
 ; Clobbers --
-;	X, Y
+;	X
 ;
-VDP_ct_copyin
-	pshs	D		; push length onto stack
-	ldd	VDP_Color_Table	; D = VRAM address of Color Table
-	leax	D,X		; compute absolute VRAM address
-	bra	VDP_copyin_common
+VDP_load_tiles
+	pshs	A,B,Y		; save registers
 
-;
-; VDP_pt_copyin
-;	Convenience routine that copies data to the Pattern Table.
-;
-; Arguments --
-;	X - Pattern Table offset
-;	Y - source buffer
-;	D - length
-;
-; Returns --
-;	None.
-;
-; Clobbers --
-;	X, Y
-;
-VDP_pt_copyin
-	pshs	D		; push length onto stack
-	ldd	VDP_Pattern_Table ; D = VRAM address of Pattern Table
-	leax	D,X		; compute absolute VRAM address
-	bra	VDP_copyin_common
+	;
+	; 3,S	pattern table address (lsb)
+	; 2,S	pattern table address (msb)
+	; 1,S	saved B
+	; 0,S	pattern count working copy
+	;
 
-;
-; VDP_sat_copyin
-;	Convenience routine that copies data to the Sprite Attribute Table.
-;
-; Arguments --
-;	X - Sprite Attribute Table offset
-;	Y - source buffer
-;	D - length
-;
-; Returns --
-;	None.
-;
-; Clobbers --
-;	X, Y
-;
-VDP_sat_copyin
-	pshs	D		; push length onto stack
-	ldd	VDP_Sprite_Attribute_Table ; D = VRAM address of SAT
-	leax	D,X		; compute absolute VRAM address
-	bra	VDP_copyin_common
+	;
+	; Compute VRAM address of tile and do an
+	; inline VDP_set_address().
+	;
+1	lda	#(VDP_VRAM_WRITE >> 3)
+	ldb	,X+		; tile number
+	M_asld			; tile number to byte offset
+	M_asld
+	M_asld
+	addd	2,S		; add pattern table address
 
-;
-; VDP_spt_copyin
-;	Convenience routine that copies data to the Sprite Pattern Table.
-;
-; Arguments --
-;	X - Sprite Pattern Table offset
-;	Y - source buffer
-;	D - length
-;
-; Returns --
-;	None.
-;
-; Clobbers --
-;	X, Y
-;
-VDP_spt_copyin
-	pshs	D		; save D temporarily
-	ldd	VDP_Sprite_Pattern_Table ; D = VRAM address of SPT
-	leax	D,X		; compute absolute VRAM address
-	bra	VDP_copyin_common
+	stb	VDP_REG_MODE1	; MODE1 <- addrL
+	sta	VDP_REG_MODE1	; MODE1 <- addrH + cmd
+
+2	ldb	#8		; put 8 bytes
+	lda	,X+		; A = next byte
+	bsr	VDP_vram_put	; put byte into VRAM
+	decb			; decrement B
+	bne	2B		; != 0, copy more pattern bytes
+
+	dec	0,S		; decrement pattern count
+	bne	1B		; != 0, load another pattern
+
+	puls	A,B,Y,PC	; restore and return
 
 ;
 ; VDP_screen_enable
@@ -488,8 +539,31 @@ VDP_set_color
 	bra	VDP_write_register_common
 
 ;
-; VDP_mode_switch
-;	Switch to the video mode described by the video mode descriptor.
+; VDP_set_register
+;	Set an arbitrary VDP register.  Use with extreme
+;	caution as there are no guard rails here.
+;
+; Arguments --
+;	A - value to program into register
+;	B - register number
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	B
+;
+VDP_set_register
+	pshs	A,X		; save registers
+	andb	#7		; make sure it's a valid register number
+	aslb			; number to shadow table offset
+	ldx	#VDP_reg_r0	; X = base of shadow register table
+	leax	B,X		; add in offset
+	bra	VDP_write_register_common
+
+;
+; VDP_set_mode
+;	Set the video mode described by the video mode descriptor.
 ;
 ; Arguments --
 ;	X - pointer to mode descriptor
@@ -505,7 +579,7 @@ VDP_set_color
 ;	switching modes.  The caller must explicitly re-register the
 ;	VSYNC handler and re-enable the screen.
 ;
-VDP_mode_switch
+VDP_set_mode
 	pshs	A,B,X,Y,U	; save registers
 
 	; Before we switch modes, reset the VSYNC handler.
@@ -540,7 +614,7 @@ VDP_mode_switch
 1	ldb	#16		; Now push the shadow registers into
 	ldx	#VDP_reg_r0	; the hardware.
 	lda	,X+
-	sta	,X+
+	sta	VDP_REG_MODE1
 	decb
 	bne	1B
 

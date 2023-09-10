@@ -64,3 +64,9 @@ VDP_Sprite_Pattern_Table	rmb	2
 ;
 	export	VDP_vsync_handler
 VDP_vsync_handler		rmb	2
+
+;
+; Flag indicating if the VDP has been aquired by an application.
+;
+	export	VDP_acquired
+VDP_acquired			rmb	1

@@ -34,14 +34,23 @@ tms9918a_api_exp_included	equ	1
 ;	vdp_get_vram_addr	Get the VRAM address of the specified
 ;				table.
 ;
-;	vdp_mode_switch		Switch to the mode specified by the
-;				TMS9918 mode descriptor.
+;	vdp_get_status		Get the value of the STATUS register.
+;
+;	vdp_set_mode		Set the video mode as specified by the
+;				mode descriptor.
 ;
 ;	vdp_set_vsync_handler	Set the VSYNC handler.
 ;
-;	vdp_set_address		Set the internal VRAM address pointer.
+;	vdp_set_address		Set the VRAM write pointer.
 ;
 ;	vdp_set_color		Set the COLOR register.
+;
+;	vdp_set_register	Set an arbitrary VDP register.  Use with
+;				extreme caution, as there are no guard
+;				rails here.  Nevertheless, this is useful
+;				for temporary relocations of the Pattern
+;				or Sprite Pattern tables for e.g. screen
+;				flashes or the like.
 ;
 ;	vdp_screen_enable	Enable the screen.
 ;
@@ -50,18 +59,20 @@ tms9918a_api_exp_included	equ	1
 ;	vdp_vram_put		Put a byte to VRAM.  The VRAM address
 ;				pointer must already be set.
 ;
-;	vdp_memset		Set a region of VRAM to a value.
+;	vdp_clear		Clear all of VRAM.
 ;
-;	vdp_copyin		Copy a buffer into VRAM.
+;	vdp_memset		Set a region of VRAM to a value.  The
+;				VRAM address pointer must already be set.
 ;
-;	vdp_nt_copyin
-;	vdp_ct_copyin
-;	vdp_pt_copyin
-;	vdp_sat_copyin
-;	vdp_spt_copyin		Copy a buffer to an offset in  the specified
-;				table in VRAM (Name Table, Color Table,
-;				Pattern Table, Sprite Attribute Table,
-;				Sprite Pattern Table).
+;	vdp_copyin		Copy a buffer into VRAM.  The VRAM address
+;				pointer must already be set.
+;
+;	vdp_copyin_inv		Copy a buffer into VRAM, inverting each byte
+;				of data as it is copied.  The VRAM address
+;				pointer must already be set.
+;
+;	vdp_load_tiles		Load a pattern pattern table in a sparse
+;				fashion from tile data.
 ;
 
 ; Arguments to vdp_get_vram_addr().
@@ -72,20 +83,20 @@ TMS9918_VRAM_ADDR_SAT		equ	3
 TMS9918_VRAM_ADDR_SPT		equ	4
 
 vdp_get_vram_addr		equ	disp_drvspec_first
-vdp_mode_switch			equ	(vdp_get_vram_addr + 2)
-vdp_set_vsync_handler		equ	(vdp_mode_switch + 2)
+vdp_get_status			equ	(vdp_get_vram_addr + 2)
+vdp_set_mode			equ	(vdp_get_status + 2)
+vdp_set_vsync_handler		equ	(vdp_set_mode + 2)
 vdp_set_address			equ	(vdp_set_vsync_handler + 2)
 vdp_set_color			equ	(vdp_set_address + 2)
-vdp_screen_enable		equ	(vdp_set_color + 2)
+vdp_set_register		equ	(vdp_set_color + 2)
+vdp_screen_enable		equ	(vdp_set_register + 2)
 vdp_screen_disable		equ	(vdp_screen_enable + 2)
 vdp_vram_put			equ	(vdp_screen_disable + 2)
-vdp_memset			equ	(vdp_vram_put + 2)
+vdp_clear			equ	(vdp_vram_put + 2)
+vdp_memset			equ	(vdp_clear + 2)
 vdp_copyin			equ	(vdp_memset + 2)
-vdp_nt_copyin			equ	(vdp_copyin + 2)
-vdp_ct_copyin			equ	(vdp_nt_copyin + 2)
-vdp_pt_copyin			equ	(vdp_ct_copyin + 2)
-vdp_sat_copyin			equ	(vdp_pt_copyin + 2)
-vdp_spt_copyin			equ	(vdp_sat_copyin + 2)
+vdp_copyin_inv			equ	(vdp_copyin + 2)
+vdp_load_tiles			equ	(vdp_copyin_inv + 2)
 
 ;
 ; There is only one CPU address line connected to the TMS9918, "MODE",
