@@ -273,33 +273,14 @@ VDP_vram_put
 ;	We assume that we've been called with length > 0 and <= 16384.
 ;
 VDP_memset
-	pshs	A,B,Y		; save A, B, length onto stack as working copy
-	;
-	; 3,S	length lsb
-	; 2,S	length msb
-	; 1,S	saved B
-	; 0,S	saved A
-	;
+	pshs	A,B,Y		; save registers
 	lda	#VDP_VRAM_WRITE
 	bsr	VDP_set_address	; set write pointer in VDP
 	puls	A		; pop A off stack
-	;
-	; 2,S	length lsb
-	; 1,S	length msb
-	; 0,S	saved B
-	;
-	cmpy	#0		; zero length?
-	beq	99F		; yes, get out.
-
 1	bsr	VDP_vram_put	; go put a byte
-	dec	2,S		; decrement lsb
+	leay	-1,Y		; decrement Y
 	bne	1B		; not 0, go do more work
-	ldb	1,S		; check msb
-	beq	99F		; 0, get out
-	dec	1,S		; decrement msb
-	bra	1B		; go do more work
-
-99	puls	B,Y		; restore and return
+	puls	B,Y		; restore and return
 
 ;
 ; VDP_copyin
@@ -314,21 +295,21 @@ VDP_memset
 ;	None.
 ;
 ; Clobbers --
-;	Y
+;	X, Y
+;
+; Notes --
+;	We assume that we've been called with length > 0 and <= 16384.
 ;
 VDP_copyin
 	pshs	D		; push length onto stack
 VDP_copyin_common
 	lda	#VDP_VRAM_WRITE	; write command
 	bsr	VDP_set_address	; set the VRAM address
+	ldx	0,S		; length into X
 1	lda	,Y+		; get byte from source buffer
 	bsr	VDP_vram_put	; put it into VRAM
-	dec	1,S		; decrement lsb of count
-	bne	1B		; != 0, go do more work
-	lda	,S		; look at msb of count
-	beq	2F		; == 0, time to get out
-	dec	,S		; decrement msb of count
-	bra	1B		; go do more work
+	leax	-1,X		; decrement X
+	bne	1B		; not 0, go do more work
 2	puls	D,PC		; restore and return
 
 ;
