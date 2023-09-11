@@ -89,7 +89,7 @@ VDP_default_mode_desc
 ;	None.
 ;
 VDP_init
-	pshs	A,B,X,Y		; save registers
+	pshs	A,X,Y		; save registers
 
 	;
 	; Set the default VSYNC interrupt handler.
@@ -113,11 +113,11 @@ VDP_init
 	lbsr	VDP_set_mode
 
 	; Clear out VRAM.
-	lbsr	VDP_clear
+;	lbsr	VDP_clear
 
 	; XXX interrupts, bruh
 
-	puls	X,Y,PC		; restore and return
+	puls	A,X,Y,PC	; restore and return
 
 ;
 ; VDP_get_tty_info
@@ -619,9 +619,9 @@ VDP_set_mode
 	decb
 	bne	1B
 
-1	ldb	#16		; Now push the shadow registers into
+	ldb	#16		; Now push the shadow registers into
 	ldx	#VDP_reg_r0	; the hardware.
-	lda	,X+
+1	lda	,X+
 	sta	VDP_REG_MODE1
 	decb
 	bne	1B
