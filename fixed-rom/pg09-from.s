@@ -215,6 +215,11 @@ cold_boot
 	lds	#KSTACK_TOP
 
 	;
+	; Enable IRQs.
+	;
+	andcc	#~CC_I
+
+	;
 	; Initialize the displays and console.
 	; N.B. The display subsystem must be enabled first!
 	;
@@ -982,7 +987,7 @@ vec_firq
 	rti
 
 vec_irq
-	rti
+	jmp	VDP_intr		; XXX for now, VDP_intr() does RTI
 
 vec_swi
 	rti
