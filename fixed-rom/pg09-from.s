@@ -141,6 +141,11 @@ warmer_boot
 	jsr	cons_reinit
 
 	;
+	; Enable IRQs.
+	;
+	andcc	#~CC_I
+
+	;
 	; XXX Here is where we would re-load the shell and return
 	; XXX back to it, unless it is the thing that exited.
 	;
