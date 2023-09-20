@@ -92,10 +92,13 @@ VDP_init
 	pshs	A,X,Y		; save registers
 
 	;
-	; Set the default VSYNC interrupt handler.
+	; Clear the VSYNC handler.
 	;
-	ldx	#VDP_vsync_handler_default
-	stx	VDP_vsync_handler
+	pshs	CC
+	orcc	#CC_I		; disable IRQ
+	clr	VDP_vsync_handler
+	clr	VDP_vsync_handler+1
+	puls	CC
 
 	;
 	; Initialize the RAM vars to have the correct register
@@ -159,10 +162,8 @@ VDP_acquire
 	pshs	X
 	ldx	#$0000		; clear existing VSYNC handler
 	bsr	VDP_set_vsync_handler
-	puls	X
-
 	inc	VDP_acquired	; set acquired flag, 0 -> 1 clears CC_Z
-	rts
+	puls	X,PC		; restore and return
 
 99	orcc	#CC_Z		; Z set -> acquisition failed
 	rts
@@ -181,8 +182,11 @@ VDP_acquire
 ;	None.
 ;
 VDP_release
+	pshs	X		; save registers
+	ldx	#$0000		; clear the VSYNC handler
+	bsr	VDP_set_vsync_handler
 	clr	VDP_acquired	; just clear the flag unconditionally
-	rts
+	puls	X,PC		; restore and return
 
 ;
 ; VDP_get_vram_addr
@@ -227,14 +231,6 @@ VDP_get_status
 	rts
 
 ;
-; VDP_vsync_handler_default
-;	Default NIL handler for the VDP interrupt that does
-;	nothing.
-;
-VDP_vsync_handler_default
-	rts
-
-;
 ; VDP_set_vsync_handler
 ;	Set the VSYNC interrupt handler.
 ;
@@ -250,10 +246,7 @@ VDP_vsync_handler_default
 ;
 VDP_set_vsync_handler
 	pshs	CC,Y		; save registers
-	cmpx	#$0000		; X == NULL?
-	bne	1F		; If yes, use the default handler.
-	ldx	#VDP_vsync_handler_default
-1	orcc	#CC_I		; dislable IRQ
+	orcc	#CC_I		; disable IRQ
 	ldy	VDP_vsync_handler
 	stx	VDP_vsync_handler
 	tfr	Y,X		; old handler into X
@@ -266,8 +259,10 @@ VDP_set_vsync_handler
 ;	with the 60Hz timer.
 ;
 VDP_intr
-	jsr	[VDP_vsync_handler]
-	lda	VDP_REG_MODE1	; ensure the interrupt status is cleared
+	ldx	VDP_vsync_handler
+	beq	1F		; don't jump through a NULL pointer
+	jsr	,X		; call the handler
+1	lda	VDP_REG_MODE1	; ensure the interrupt status is cleared
 
 	; XXX timer stuff
 
