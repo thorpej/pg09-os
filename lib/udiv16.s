@@ -93,7 +93,7 @@ udiv16
 	; place, forming the quotient 1 bit at a time.  Quotient shifts
 	; in as the dividend shifts out.
 	;
-1	asl	5,S		; shift next divident bit through
+1	asl	5,S		; shift next dividend bit through
 	rol	4,S		; into remainder (D), clearing
 	rolb			; next quotient bit at bit 0 5,S.
 	rola
@@ -101,7 +101,7 @@ udiv16
 	blo	2F		; and skip (quotient bit = 0) if not.
 	subd	6,S		; It can, so subtract and set the
 	inc	5,S		; quotient bit at the corresponding place.
-2	dec	,S		; Repeat until all 16 divident bits have
+2	dec	,S		; Repeat until all 16 dividend bits have
 	bne	1B		; been shifted, D holds the remainder.
 
 	;
