@@ -91,7 +91,7 @@ udiv16
 	;
 	; Loop 16 times, trying to subtract the divisor at each digit
 	; place, forming the quotient 1 bit at a time.  Quotient shifts
-	; in as the divident shifts out.
+	; in as the dividend shifts out.
 	;
 1	asl	5,S		; shift next divident bit through
 	rol	4,S		; into remainder (D), clearing
