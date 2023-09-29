@@ -1,0 +1,172 @@
+;
+; Copyright (c) 2023 Jason R. Thorpe.
+; All rights reserved.
+;
+; Redistribution and use in source and binary forms, with or without
+; modification, are permitted provided that the following conditions
+; are met:
+; 1. Redistributions of source code must retain the above copyright
+;    notice, this list of conditions and the following disclaimer.
+; 2. Redistributions in binary form must reproduce the above copyright
+;    notice, this list of conditions and the following disclaimer in the
+;    documentation and/or other materials provided with the distribution.
+;
+; THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+; IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+; OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+; IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+; INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+; BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+; AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+; OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+; OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+; SUCH DAMAGE.
+;
+
+	if	file_api_exp_included
+	else
+file_api_exp_included	equ	1
+
+;
+; Exports related to file I/O for the 6809 Playground.
+;
+; This ends up as part of the OS ABI, so don't change this unless you
+; know what you're doing!
+;
+; The following SysSubrs also support the file API:
+;
+;	SysSubr_file_open
+;	SysSubr_file_io
+;	SysSubr_file_close
+;
+
+;
+; File Control Block.
+;
+; Each file has an associated File Control Block that is allocated by
+; the calling application.  State for the file is maintained in this
+; block by the operating system as file I/O is performed.
+;
+;    [lower address]
+;
+;	u16	pointer to fileops
+;	u8	error from last operation (0 == no error)
+;	u8[13]	opaque data
+;
+;    [higher address]		16 bytes
+;
+fcb_fileops			equ	0
+fcb_error			equ	(fcb_fileops + 2)
+fcb_opaque			equ	(fcb_error + 1)
+fcb_fcbsz			equ	(fcb_opaque + 13)
+
+;
+; File open arguments
+;
+;    [lower address]
+;
+;	u16	pointer to FCB
+;	u16	pointer to file name
+;	u8	file name length
+;	u16	open flags
+;
+;    [higher address]		7 bytes
+;
+fopen_fcb			equ	0
+fopen_name			equ	(fopen_fcb + 2)
+fopen_namelen			equ	(fopen_name + 2)
+fopen_flags			equ	(fopen_namelen + 1)
+fopen_argsz			equ	(fopen_flags + 2)
+
+; Open flags.  These values match NHACP.
+O_RDONLY			equ	$0000
+O_RDWR				equ	$0001
+O_RDWP				equ	$0002
+O_DIRECTORY			equ	$0008
+O_CREAT				equ	$0010
+O_EXCL				equ	$0020
+O_TRUNC				equ	$0040
+
+;
+; File I/O arguments
+;
+;    [lower address]
+;
+;	u16	pointer to FCB
+;	u8	I/O op
+;	u8	type flags
+;	u16	data buffer
+;	u16	data length
+;	u16	actual
+;	u32	offset
+;
+;    [higher address]		14 bytes
+;
+fio_fcb				equ	0
+fio_op				equ	(fio_fcb + 2)
+fio_flags			equ	(fio_op + 1)
+fio_whence			equ	fio_flags	; for SEEK
+fio_data			equ	(fio_flags + 1)
+fio_length			equ	(fio_data + 2)
+fio_actual			equ	(fio_length + 2)
+fio_offset			equ	(fio_actual + 2)
+fio_argsz			equ	(fio_offset + 4)
+
+FIO_OP_READ			equ	0
+FIO_OP_PREAD			equ	1
+FIO_OP_WRITE			equ	2
+FIO_OP_PWRITE			equ	3
+FIO_OP_SEEK			equ	4
+FIO_OP_GET_INFO			equ	5
+FIO_OP_SET_SIZE			equ	6
+FIO_OP_LIST_DIR			equ	7
+FIO_OP_GET_DIR_ENTRY		equ	8
+
+;
+; Whence values for FIO_SEEK.  These are taken right from NHACP.
+;
+SEEK_SET			equ	0
+SEEK_CUR			equ	1
+SEEK_END			equ	2
+
+;
+; File close arguments
+;
+;    [lower address]
+;
+;	u16	pointer to FCB
+;
+;    [higher address]		2 bytes
+;
+fclose_fcb			equ	0
+fclose_argsz			equ	(fclose_fcb + 2)
+
+file_maxargsz			equ	16
+
+;
+; Error codes.  These are taken right from NHACP.
+;
+ENOTSUP				equ	1
+EPERM				equ	2
+ENOENT				equ	3
+EIO				equ	4
+EBADF				equ	5
+ENOMEM				equ	6
+EACCES				equ	7
+EBUSY				equ	8
+EEXIST				equ	9
+EISDIR				equ	10
+EINVAL				equ	11
+ENFILE				equ	12
+EFBIG				equ	13
+ENOSPC				equ	14
+ESEEK				equ	15
+ENOTDIR				equ	16
+ENOTEMPTY			equ	17
+ESRCH				equ	18
+ENSESS				equ	19
+EAGAIN				equ	20
+EROFS				equ	21
+
+	endif	; file_api_exp_included

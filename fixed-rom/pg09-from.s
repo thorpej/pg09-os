@@ -38,6 +38,7 @@
 
 	include "../sys-api/pg09-os.exp"
 	include "../sys-api/display-api.exp"
+	include "../sys-api/file-api.exp"
 
 	include "../banked-rom0/pg09-brom0.exp"
 
@@ -76,6 +77,10 @@ SysSubr_\1	fdb	\1
 	SysSubr display_get_descriptor
 	SysSubr display_acquire
 	SysSubr display_release
+
+	SysSubr file_open
+	SysSubr file_io
+	SysSubr file_close
 
 	;
 	; System ADDRESS equates.  These are the exported names of
@@ -522,6 +527,74 @@ brom_call
 	; 0,S		slot for new CC to return
 	;
 	puls	CC,A,X,U,PC	; Restore and return.
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; File I/O API
+	;
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;
+; file_open
+;	Open a file.
+;
+; Arguments --
+;	X - pointer to file open arguments
+;
+; Returns --
+;	Error status in File Control Block.
+;
+; Clobbers --
+;	None.
+;
+file_open
+	pshs	A,X
+	ldx	fopen_fcb,X
+	lda	#ENOTSUP
+	sta	fcb_error,X
+	puls	A,X,PC
+
+;
+; file_io
+;	Perform I/O to a file.
+;
+; Arguments --
+;	X - pointer to file IO arguments
+;
+; Returns --
+;	Error status in File Control Block.
+;
+; Clobbers --
+;	None.
+;
+file_io
+	pshs	A,X
+	ldx	fopen_fcb,X
+	lda	#ENOTSUP
+	sta	fcb_error,X
+	puls	A,X,PC
+
+;
+; file_close
+;	Close an open file.
+;
+; Arguments --
+;	X - pointer to file close arguments
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+file_close
+	rts
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; Miscellaneous routines
+	;
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;
 ; panic
