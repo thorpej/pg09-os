@@ -206,6 +206,7 @@ acia_pollchar
 	bita	#ACIA_SR_RDRF	; test Receive Data Register Full
 	beq	1F		; not set, return
 	lda	ACIA_REG_DATA	; set, return character
+	andcc	#~CC_Z		; make sure Z is clear
 1	rts
 
 ;
