@@ -113,12 +113,15 @@ nhacp_drain
 ;	A, B
 ;
 nhacp_get_reply_byte
+	ldd	nhctx_reply_len,U
+	beq	99F		; already at 0? Return $FF.
+	subd	#1		; decrement length
+	std	nhctx_reply_len,U
 	jsr	[nhctx_getc,U]	; get the byte
-	pshs	A		; stash it on the stack
-	ldd	nhctx_reply_len,U ; get length
-	subd	#1		; decrement
-	std	nhctx_reply_len,U ; update length
-	puls	A,PC		; get byte back into A and return
+	rts
+99
+	lda	#$FF
+	rts
 
 ;
 ; nhacp_get_reply_hdr
