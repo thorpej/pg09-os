@@ -47,7 +47,7 @@
 nhacp_copyin
 	leay	D,X		; Y = end pointer
 	pshs	Y		; push it onto stack
-1	jsr	[nhctx_getc,U]	; get byte from server
+1	jsr	nhacp_get_reply_byte ; get byte from server
 	sta	,X+		; store byte, advance buffer pointer
 	cmpx	,S		; At the end?
 	bne	1B		; Nope, go get more data
@@ -114,13 +114,14 @@ nhacp_drain
 ;
 nhacp_get_reply_byte
 	ldd	nhctx_reply_len,U
-	beq	99F		; already at 0? Return $FF.
+	beq	99F		; already at 0?
+	bmi	99F		; or, gasp, negative?
 	subd	#1		; decrement length
 	std	nhctx_reply_len,U
 	jsr	[nhctx_getc,U]	; get the byte
 	rts
 99
-	lda	#$FF
+	clra			; return 0s if we're over.
 	rts
 
 ;

@@ -42,6 +42,17 @@ file_api_exp_included	equ	1
 ;
 
 ;
+; File Operations vector
+;
+;	u16	file-open
+;	u16	file-io
+;	u16	file-close
+;
+fov_open			equ	0
+fov_io				equ	(fov_open + 2)
+fov_close			equ	(fov_io + 2)
+
+;
 ; File Control Block.
 ;
 ; Each file has an associated File Control Block that is allocated by
