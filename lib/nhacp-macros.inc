@@ -25,38 +25,25 @@
 ;
 
 ;
-; Client implementation of the NABU HCCA Application Communication Protocol.
+; nhacp_req_init --
+;	Macro to initialize the request scratch area in the
+;	NHACP context.
 ;
-; We're not running on a NABU, obviously, and don't have a "Home Cable
-; Computer Adaptor", but we're not going to let that stop us!
+; Arguments --
+;	Quoted short name of NHACP request, e.g.:
 ;
-
+;		nhacp_req_init "STORAGE_OPEN"
 ;
-; NHACP context - 32 bytes
+;	U - NHACP context
 ;
-;	u16	getc routine
-;	u16	putc routine
-;	u16	data buffer
-;	u16	data length
-;	u8	session ID + 1 (0 == $FF+1 == invalid session)
-;	u8	request length
-;	u8[22]	req/reply scratch buffer
+; Returns --
+;	None.
 ;
-nhctx_getc		equ	0
-nhctx_putc		equ	(nhctx_getc + 2)
-nhctx_data		equ	(nhctx_putc + 2)
-nhctx_datalen		equ	(nhctx_data + 2)
-nhctx_session		equ	(nhctx_datalen + 2)
-nhctx_reqlen		equ	(nhctx_session + 1)
-nhctx_scratch		equ	(nhctx_reqlen + 1)
-nhctx_req		equ	nhctx_scratch
-nhctx_reply		equ	nhctx_scratch
-nhctx_ctxsz		equ	(nhctx_scratch + 22)
-
-nhctx_req_session	equ	(nhctx_req + 1)	; session ID field
-nhctx_req_flen		equ	(nhctx_req + 2)	; frame length field
-nhctx_req_type		equ	(nhctx_req + 4)	; msg type
-nhctx_req_args		equ	(nhctx_req + 5)	; 1st byte after msg type
-
-nhctx_reply_len		equ	nhctx_reply
-nhctx_reply_type	equ	(nhctx_reply_len + 2)
+; Clobbers --
+;	A, B
+;
+nhacp_req_init		macro
+	lda	#NHACP_MSG_\1
+	ldb	#NHACP_MSG_\1_len
+	jsr	nhacp_req_init0
+	endm
