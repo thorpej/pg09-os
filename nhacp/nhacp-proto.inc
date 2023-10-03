@@ -31,8 +31,10 @@
 ; Computer Adaptor", but we're not going to let that stop us!
 ;
 ; Refer to:
-; https://github.com/NHACP-IF/NHACP-specification/blob/main/nhacp-specification.md
+;	https://github.com/NHACP-IF/NHACP-specification
 ;
+
+NHACP_MAX_PAYLOAD		equ	8192
 
 NHACP_MSG_GOODBYE		equ	$ef
 NHACP_MSG_GOODBYE_len		equ	1
@@ -75,6 +77,27 @@ NHACP_MSG_FILE_GET_INFO_len	equ	2
 
 NHACP_MSG_FILE_SET_SIZE		equ	$0d
 NHACP_MSG_FILE_SET_SIZE_len	equ	6
+
+NHACP_MSG_LIST_DIR		equ	$0e
+NHACP_MSG_LIST_DIR_len		equ	3
+
+NHACP_MSG_GET_DIR_ENTRY		equ	$0f
+NHACP_MSG_GET_DIR_ENTRY_len	equ	3
+
+;
+; REMOVE, RENAME, and MKDIR are namespace ops, and they're handled
+; differently.  These request lengths do not include the STRING
+; fields.
+;
+
+NHACP_MSG_REMOVE		equ	$10
+NHACP_MSG_REMOVE_len		equ	3
+
+NHACP_MSG_RENAME		equ	$11
+NHACP_MSG_RENAME_len		equ	1
+
+NHACP_MSG_MKDIR			equ	$12
+NHACP_MSG_MKDIR_len		equ	1
 
 NHACP_RESP_SESSION_STARTED	equ	$80
 
