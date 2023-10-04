@@ -496,7 +496,53 @@ file_nhacp_io_pwrite
 	bra	file_nhacp_io_pwrite
 
 file_nhacp_io_seek
-	bra	file_nhacp_io_enotsup
+	nhacp_req_init "FILE_SEEK"
+
+	ldx	4,S		; recover args pointer
+
+	; We have a 32-bit big-endian number that needs to
+	; be stored in a 32-bit little-endian field.
+	;
+	; 0 1 2 3	0 1 2 3
+	; 4 3 2 1	1 2 3 4
+	ldd	fio_offset,X	; A = 4, B = 3
+	sta	nhctx_req_args+4
+	stb	nhctx_req_args+3
+	ldd	fio_offset+2,X	; A = 2, B = 1
+	sta	nhctx_req_args+2
+	stb	nhctx_req_args+1
+
+	lda	fio_whence,X
+	sta	nhctx_req_args+5
+
+	jsr	nhacp_req_send
+
+	; Receive the reply.
+	jsr	nhacp_get_reply_hdr
+	beq	file_nhacp_io_eio
+
+	; Check for ERROR reply.
+	lda	nhctx_reply_type,U
+	cmpa	#NHACP_RESP_ERROR
+	beq	file_nhacp_io_error_reply
+
+	; Unknown error if not UINT32_VALUE.
+	cmpa	#NHACP_RESP_UINT32_VALUE
+	bne	file_nhacp_io_eio
+
+	; Comes back in little-endian order.  Store it back into
+	; the fio_offset field.
+	ldx	4,S		; recover args pointer
+	jsr	nhacp_get_reply_byte
+	sta	fio_offset+3,X
+	jsr	nhacp_get_reply_byte
+	sta	fio_offset+2,X
+	jsr	nhacp_get_reply_byte
+	sta	fio_offset+1,X
+	jsr	nhacp_get_reply_byte
+	sta	fio_offset,X
+
+	bra	file_nhacp_io_done
 
 file_nhacp_io_get_info
 	bra	file_nhacp_io_enotsup
