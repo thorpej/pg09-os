@@ -71,11 +71,13 @@ nhacp_copyin
 nhacp_copyout
 	leay	D,X		; Y = end pointer
 	pshs	Y		; push it onto stack
+	lda	nhctx_session,U	; check for dead session
+	beq	99F
 1	lda	,X+		; get a byte, advance buffer pointer
 	jsr	[nhctx_putc,U]	; push the byte to the server
 	cmpx	,S		; At the end?
 	bne	1B		; Nope, go get more data
-	puls	Y,PC		; pop Y (clobber) and return
+99	puls	Y,PC		; pop Y (clobber) and return
 
 ;
 ; nhacp_drain
@@ -145,12 +147,16 @@ nhacp_get_reply_hdr
 	sta	nhctx_reply_len+1,U ; store it in big-endian order
 	jsr	[nhctx_getc,U]	; get MSB if reply length
 	sta	nhctx_reply_len,U
-	ora	nhctx_reply_len+1,U ; set Z if length == 0
+	ora	nhctx_reply_len+1,U ; check for zero length
 	beq	99F
 	bsr	nhacp_get_reply_byte ; get msg type
 	sta	nhctx_reply_type,U
 	andcc	#~CC_Z		; make sure Z is not set
-99	rts
+	rts
+99
+	clr	nhctx_reply_len,U   ; zero reply length
+	clr	nhctx_reply_len+1,U ; sets Z
+	rts
 
 ;
 ; nhacp_req_init0 --
