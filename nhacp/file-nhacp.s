@@ -531,16 +531,14 @@ file_nhacp_io_seek
 	bne	file_nhacp_io_eio
 
 	; Comes back in little-endian order.  Store it back into
-	; the fio_offset field.
+	; the fio_offset field in big-endian order.
 	ldx	4,S		; recover args pointer
-	jsr	nhacp_get_reply_byte
-	sta	fio_offset+3,X
-	jsr	nhacp_get_reply_byte
-	sta	fio_offset+2,X
-	jsr	nhacp_get_reply_byte
-	sta	fio_offset+1,X
-	jsr	nhacp_get_reply_byte
-	sta	fio_offset,X
+	ldb	fio_offset+3
+1	jsr	nhacp_get_reply_byte
+	sta	B,X
+	decb
+	cmpb	#fio_offset
+	bhs	1B
 
 	bra	file_nhacp_io_done
 
