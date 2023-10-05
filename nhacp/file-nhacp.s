@@ -80,7 +80,8 @@ file_nhacp_open
 
 	lda	#$FF		; server chooses fdesc
 	sta	nhctx_req_args,U
-	sta	fcb_nhacp_fd,Y	; default to invalid fdesc on error
+
+	clr	fcb_nhacp_fd,Y	; default to invalid fdesc on error
 
 	ldd	fopen_flags,X
 	stb	nhctx_req_args+1,U
@@ -115,8 +116,13 @@ file_nhacp_open
 	; the rest of the reply.
 	jsr	nhacp_get_reply_byte
 	ldy	,S		; get saved FCB pointer (but don't pop)
+	inca			; we save it as fdesc+1
 	sta	fcb_nhacp_fd,Y	; save fdesc in FCB
 	bra	file_nhacp_io_done
+
+file_nhacp_io_ebadf
+	lda	#EBADF
+	bra	file_nhacp_io_error
 
 file_nhacp_io_enotsup
 	lda	#ENOTSUP
@@ -283,6 +289,8 @@ file_nhacp_io
 	; Each of the ops in question has a file descriptor at
 	; the same slot in the request, so just stash it now.
 	ldb	fcb_nhacp_fd,Y	; B = file descriptor
+	beq	nhacp_io_ebadf	; 0 == invalid file descriptor
+	decb			; convert to actual fdesc
 	stb	nhctx_req_args,U ; stash fdesc in request
 
 	; Jump to the handler.
@@ -585,9 +593,13 @@ file_nhacp_close
 	nhacp_req_init "FILE_CLOSE"
 
 	lda	fcb_nhacp_fd,Y
+	beq	99F		; 0 == invalid file descriptor
+	deca			; convert to real fdesc
 	sta	nhctx_req_args,U
+
+	clr	fcb_nhacp_fd,Y	; invalidate the fdesc in the FCB
 
 	jsr	nhacp_req_send
 
 	; No reply to FILE-CLOSE.
-	puls	A,B,X,Y,U,PC	; restore and return
+99	puls	A,B,X,Y,U,PC	; restore and return
