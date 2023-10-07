@@ -42,17 +42,28 @@ file_api_exp_included	equ	1
 ;
 
 ;
+; File System Operations vector
+;
+;	u16	fs-devname	pointer to NUL-terminated dev name
+;	u16	fs-fsname	pointer to NUL-terminated FS name
+;	u16	fs-fileops	pointer to file operations table
+;	u16	fs-mount	mount routine
+;	u16	fs-unmount	unmount routine
+;
+fsov_devname			equ	0
+fsov_fsname			equ	(fsov_devname + 2)
+fsov_fileops			equ	(fsov_fsname + 2)
+fsov_mount			equ	(fsov_fileops + 2)
+fsov_unmount			equ	(fsov_mount + 2)
+
+;
 ; File Operations vector
 ;
-;	u16	file-system-mount
-;	u16	file-system-unmount
 ;	u16	file-open
 ;	u16	file-io
 ;	u16	file-close
 ;
-fov_mount			equ	0
-fov_unmount			equ	(fov_mount + 2)
-fov_open			equ	(fov_unmount + 2)
+fov_open			equ	0
 fov_io				equ	(fov_open + 2)
 fov_close			equ	(fov_io + 2)
 

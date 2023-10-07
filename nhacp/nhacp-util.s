@@ -29,6 +29,9 @@
 ; Communication Protocol.
 ;
 
+nhacp_fsname
+	fcn	"NHACP"
+
 ;
 ; nhacp_copyin
 ;	Copy data in from the NHACP interface.
