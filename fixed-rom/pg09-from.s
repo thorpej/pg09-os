@@ -580,11 +580,16 @@ file_open
 ;	None.
 ;
 file_io
-	pshs	A,X
-	ldx	fopen_fcb,X
-	lda	#ENOTSUP
+	pshs	A,Y
+
+	; Get the file ops vector.  Since the file ops pointer
+	; is the first field in the FCB, we can just use indirect
+	; addressing, rather than issuing 2 load instructions.
+	ldy	[fio_fcb,X]
+
+	jsr	[fov_io,Y]
 	sta	fcb_error,X
-	puls	A,X,PC
+	puls	A,Y,PC
 
 ;
 ; file_close
@@ -600,7 +605,15 @@ file_io
 ;	None.
 ;
 file_close
-	rts
+	pshs	Y
+
+	; Get the file ops vector.  Since the file ops pointer
+	; is the first field in the FCB, we can just use indirect
+	; addressing, rather than issuing 2 load instructions.
+	ldy	[fclose_fcb,X]
+
+	jsr	[fov_close,Y]
+	puls	Y,PC
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;
