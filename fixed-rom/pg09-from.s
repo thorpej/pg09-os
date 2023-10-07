@@ -560,11 +560,14 @@ brom_call
 ;	None.
 ;
 file_open
-	pshs	A,X
-	ldx	fopen_fcb,X
-	lda	#ENOTSUP
-	sta	fcb_error,X
-	puls	A,X,PC
+	;
+	; XXX No drive letter processing yet.
+	;
+	pshs	Y
+	ldy	#dacia_fileops
+	sty	[fopen_fcb,X]	; store fileops pointer in FCB
+	jsr	[fov_open,Y]
+	puls	Y,PC
 
 ;
 ; file_io
@@ -580,16 +583,14 @@ file_open
 ;	None.
 ;
 file_io
-	pshs	A,Y
+	pshs	Y
 
 	; Get the file ops vector.  Since the file ops pointer
 	; is the first field in the FCB, we can just use indirect
 	; addressing, rather than issuing 2 load instructions.
 	ldy	[fio_fcb,X]
-
 	jsr	[fov_io,Y]
-	sta	fcb_error,X
-	puls	A,Y,PC
+	puls	Y,PC
 
 ;
 ; file_close
@@ -611,7 +612,6 @@ file_close
 	; is the first field in the FCB, we can just use indirect
 	; addressing, rather than issuing 2 load instructions.
 	ldy	[fclose_fcb,X]
-
 	jsr	[fov_close,Y]
 	puls	Y,PC
 
