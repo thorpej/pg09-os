@@ -71,6 +71,10 @@ fov_close			equ	(fov_io + 2)
 ;
 ;    [higher address]		16 bytes
 ;
+; N.B. Other code assumes that the fileops pointer is the first field
+; of the FCB, which allows the use of indirect addressing modes to save
+; instructions.
+;
 fcb_fileops			equ	0
 fcb_error			equ	(fcb_fileops + 2)
 fcb_opaque			equ	(fcb_error + 1)
