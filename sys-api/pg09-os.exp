@@ -51,6 +51,7 @@ SysSubr_display_get_default equ 57364
 SysSubr_display_get_descriptor equ 57366
 SysSubr_display_release equ 57370
 SysSubr_exit equ 57344
+SysSubr_file_close equ 57376
 SysSubr_file_io equ 57374
 SysSubr_file_open equ 57372
 SysSubr_hbram_switch equ 57352
