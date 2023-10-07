@@ -44,11 +44,15 @@ file_api_exp_included	equ	1
 ;
 ; File Operations vector
 ;
+;	u16	file-system-mount
+;	u16	file-system-unmount
 ;	u16	file-open
 ;	u16	file-io
 ;	u16	file-close
 ;
-fov_open			equ	0
+fov_mount			equ	0
+fov_unmount			equ	(fov_mount + 2)
+fov_open			equ	(fov_unmount + 2)
 fov_io				equ	(fov_open + 2)
 fov_close			equ	(fov_io + 2)
 
