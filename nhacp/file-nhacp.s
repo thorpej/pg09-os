@@ -101,16 +101,16 @@ file_nhacp_open
 
 	; Receive the reply.
 	jsr	nhacp_get_reply_hdr
-	beq	file_nhacp_io_eio
+	lbeq	file_nhacp_io_eio
 
 	; Check for ERROR reply.
 	lda	nhctx_reply_type,U
 	cmpa	#NHACP_RESP_ERROR
-	beq	file_nhacp_io_error_reply
+	lbeq	file_nhacp_io_error_reply
 
 	; Unknown error if not STORAGE_LOADED.
 	cmpa	#NHACP_RESP_STORAGE_LOADED
-	bne	file_nhacp_io_eio
+	lbne	file_nhacp_io_eio
 
 	; Get the file descriptor.  We don't care about
 	; the rest of the reply.
@@ -118,37 +118,7 @@ file_nhacp_open
 	ldy	,S		; get saved FCB pointer (but don't pop)
 	inca			; we save it as fdesc+1
 	sta	fcb_nhacp_fd,Y	; save fdesc in FCB
-	bra	file_nhacp_io_done
-
-file_nhacp_io_ebadf
-	lda	#EBADF
-	bra	file_nhacp_io_error
-
-file_nhacp_io_enotsup
-	lda	#ENOTSUP
-	bra	file_nhacp_io_error
-
-file_nhacp_io_einval
-	lda	#EINVAL
-	bra	file_nhacp_io_error
-
-file_nhacp_io_error_reply
-	; Get the error code from the reply.
-	jsr	nhacp_get_reply_byte
-	bne	file_nhacp_io_error	; error != 0, cool cool.
-					; error == 0, map to EIO
-file_nhacp_io_eio
-	lda	#EIO
-	bra	file_nhacp_io_error
-
-file_nhacp_io_done
-	clra			; error = 0
-file_nhacp_io_error
-	; A = error code
-	puls	Y		; get saved FCB pointer
-	sta	fcb_error,Y
-	jsr	nhacp_drain	; drain off the rest of the reply
-	puls	A,B,X,Y,U,PC	; restore and return
+	lbra	file_nhacp_io_done
 
 file_nhacp_io_jmptab
 	fdb	file_nhacp_io_read
@@ -281,7 +251,7 @@ file_nhacp_io
 	; 0,S			; saved FCB pointer
 	;
 	; Get the opcode and calculate the jump table offset.
-	lda	fio_io,X	; X = opcode
+	lda	fio_op,X	; X = opcode
 	asla			; code to table offset
 	cmpa	#file_nhacp_io_jmptab_size
 	bhs	file_nhacp_io_einval
@@ -289,7 +259,7 @@ file_nhacp_io
 	; Each of the ops in question has a file descriptor at
 	; the same slot in the request, so just stash it now.
 	ldb	fcb_nhacp_fd,Y	; B = file descriptor
-	beq	nhacp_io_ebadf	; 0 == invalid file descriptor
+	beq	file_nhacp_io_ebadf ; 0 == invalid file descriptor
 	decb			; convert to actual fdesc
 	stb	nhctx_req_args,U ; stash fdesc in request
 
@@ -297,11 +267,19 @@ file_nhacp_io
 	ldx	#file_nhacp_io_jmptab
 	jsr	[A,X]
 
+file_nhacp_io_einval
+	lda	#EINVAL
+	lbra	file_nhacp_io_error
+
+file_nhacp_io_ebadf
+	lda	#EBADF
+	lbra	file_nhacp_io_error
+
 file_nhacp_io_read
 	nhacp_req_init "FILE_READ"
 
 	ldd	fcb_nhacp_resid,Y
-	beq	file_nhacp_io_done ; done if resid == 0
+	lbeq	file_nhacp_io_done ; done if resid == 0
 	cmpd	#NHACP_MAX_PAYLOAD
 	bls	1F
 	ldd	#NHACP_MAX_PAYLOAD ; clamp!
@@ -315,16 +293,16 @@ file_nhacp_io_read
 
 	; Receive the reply.
 	jsr	nhacp_get_reply_hdr
-	beq	file_nhacp_io_eio
+	lbeq	file_nhacp_io_eio
 
 	; Check for ERROR reply.
 	lda	nhctx_reply_type,U
 	cmpa	#NHACP_RESP_ERROR
-	beq	file_nhacp_io_error_reply
+	lbeq	file_nhacp_io_error_reply
 
 	; Unknown error if not DATA_BUFFER.
 	cmpa	#NHACP_RESP_DATA_BUFFER
-	bne	file_nhacp_io_eio
+	lbne	file_nhacp_io_eio
 
 	; Get returned length into D.
 	jsr	nhacp_get_reply_byte
@@ -341,7 +319,7 @@ file_nhacp_io_read
 	jsr	nhacp_copyin	; get data from interface
 	puls	D,Y		; restore D,Y
 
-	bsr	file_nhacp_io_advance
+	lbsr	file_nhacp_io_advance
 	bra	file_nhacp_io_read
 
 file_nhacp_io_pread
@@ -397,8 +375,30 @@ file_nhacp_io_pread
 	jsr	nhacp_copyin	; get data from interface
 	puls	D,Y		; restore D,Y
 
-	bsr	file_nhacp_io_advance_offset
+	lbsr	file_nhacp_io_advance_offset
 	bra	file_nhacp_io_pread
+
+;
+; Tail of the I/O routines -- trying to keep them close to where
+; they're referenced so that 8-bit relative branches are possible.
+;
+file_nhacp_io_error_reply
+	; Get the error code from the reply.
+	jsr	nhacp_get_reply_byte
+	bne	file_nhacp_io_error	; error != 0, cool cool.
+					; error == 0, map to EIO
+file_nhacp_io_eio
+	lda	#EIO
+	bra	file_nhacp_io_error
+
+file_nhacp_io_done
+	clra			; error = 0
+file_nhacp_io_error
+	; A = error code
+	puls	Y		; get saved FCB pointer
+	sta	fcb_error,Y
+	jsr	nhacp_drain	; drain off the rest of the reply
+	puls	A,B,X,Y,U,PC	; restore and return
 
 file_nhacp_io_write
 	nhacp_req_init "FILE_WRITE"
@@ -440,7 +440,7 @@ file_nhacp_io_write
 	; the full amount.
 	puls	D		; pop length from stack
 
-	bsr	file_nhacp_io_advance
+	lbsr	file_nhacp_io_advance
 	bra	file_nhacp_io_write
 
 file_nhacp_write_eio
@@ -500,7 +500,7 @@ file_nhacp_io_pwrite
 	; the full amount.
 	puls	D		; pop length from stack
 
-	bsr	file_nhacp_io_advance_offset
+	lbsr	file_nhacp_io_advance_offset
 	bra	file_nhacp_io_pwrite
 
 file_nhacp_io_seek
@@ -527,16 +527,16 @@ file_nhacp_io_seek
 
 	; Receive the reply.
 	jsr	nhacp_get_reply_hdr
-	beq	file_nhacp_io_eio
+	lbeq	file_nhacp_io_eio
 
 	; Check for ERROR reply.
 	lda	nhctx_reply_type,U
 	cmpa	#NHACP_RESP_ERROR
-	beq	file_nhacp_io_error_reply
+	lbeq	file_nhacp_io_error_reply
 
 	; Unknown error if not UINT32_VALUE.
 	cmpa	#NHACP_RESP_UINT32_VALUE
-	bne	file_nhacp_io_eio
+	lbne	file_nhacp_io_eio
 
 	; Comes back in little-endian order.  Store it back into
 	; the fio_offset field in big-endian order.
@@ -548,7 +548,11 @@ file_nhacp_io_seek
 	cmpb	#fio_offset
 	bhs	1B
 
-	bra	file_nhacp_io_done
+	lbra	file_nhacp_io_done
+
+file_nhacp_io_enotsup
+	lda	#ENOTSUP
+	lbra	file_nhacp_io_error
 
 file_nhacp_io_get_info
 	bra	file_nhacp_io_enotsup
