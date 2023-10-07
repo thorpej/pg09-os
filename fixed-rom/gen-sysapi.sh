@@ -37,7 +37,7 @@ cat << _EOF > "$tmp_file"
 ;
 _EOF
 
-SysSubr_list=`grep "^SysSubr_5" "$sym_file" | cut -f 1 | cut -d _ -f 2`
+SysSubr_list=`grep "^SysSubr_[5|6]" "$sym_file" | cut -f 1 | cut -d _ -f 2`
 SysAddr_list=`grep "^SysAddr_" "$sym_file" | cut -f 1 | grep -v _size`
 SysAddr_size_list=`grep "^SysAddr_" "$sym_file" | cut -f 1 | grep _size`
 
