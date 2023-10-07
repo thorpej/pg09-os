@@ -280,7 +280,7 @@ nhacp_start_session_common
 	jsr	nhacp_get_reply_hdr
 	beq	99F
 	lda	nhctx_reply_type,U
-	cmpa	#NHACP_REPL_SESSION_STARTED
+	cmpa	#NHACP_RESP_SESSION_STARTED
 	bne	98F		; ERROR or unexpected reply
 	jsr	[nhctx_getc,U]	; get the session ID
 	inca			; add 1 for dead session detection
