@@ -241,7 +241,7 @@ cold_boot
 	;
 	jsr	iputs
 	fcc	"@thorpej's 6809 Playground OS, version "
-	fcc	"0.3"		; Change version number here!
+	fcc	"0.4"		; Change version number here!
 	fcc	"\r\n"
 	fcn	"Built: "
 	ldx	#build_date
@@ -269,6 +269,7 @@ cold_boot
 	;
 	; Library routines
 	;
+	include "../lib/memcpy8.s"
 	include "../lib/memzero8.s"
 	include "../lib/memzero16.s"
 	include "../lib/parsedec.s"
@@ -283,6 +284,14 @@ cold_boot
 	include "../lib/mulDx10.s"
 	include "../lib/udiv16.s"
 
+	if CONFIG_NHACP
+	include "../nhacp/nhacp.exp"
+	include "../nhacp/nhacp-proto.inc"
+	include "../nhacp/nhacp-macros.inc"
+	include "../nhacp/nhacp-util.s"
+	include "../nhacp/file-nhacp.s"
+	endif
+
 	;
 	; Device drivers.
 	;
@@ -293,6 +302,9 @@ cold_boot
 	if CONFIG_DISPLAY_TMS9918A
 	include "../sys-api/tms9918a-api.exp"
 	include "../drivers/tms9918a/tms9918a-base.s"
+	endif
+	if CONFIG_NHACP_W65C51
+	include "../drivers/w65c51/w65c51-nhacp.s"
 	endif
 
 ;

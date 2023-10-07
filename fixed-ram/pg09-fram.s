@@ -66,9 +66,15 @@ can_continue	rmb	1
 ;
 ; Pull in RAM variables used by various device drivers.
 ;
+	if CONFIG_NHACP
+	include "../nhacp/nhacp.exp"
+	endif
 	include "../drivers/display/display-ramvars.s"
 	if CONFIG_DISPLAY_TMS9918A
 	include "../drivers/tms9918a/tms9918a-ramvars.s"
+	endif
+	if CONFIG_NHACP_W65C51
+	include "../drivers/w65c51/w65c51-nhacp-ramvars.s"
 	endif
 
 ; Put the monitor's interrupt frame at the top of FRAM.  This
