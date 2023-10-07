@@ -310,4 +310,5 @@ nhacp_start_session_common
 nhacp_end_session
 	nhacp_req_init "GOODBYE"
 	jsr	nhacp_req_send
+	clr	nhctx_session,U	; invalidate session.
 	rts			; no reply to a GOODBYE message
