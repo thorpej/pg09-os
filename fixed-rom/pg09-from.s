@@ -546,6 +546,132 @@ brom_call
 	;
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+fs_avail
+	if CONFIG_NHACP_W65C51
+	fdb	dacia_fsops
+	endif
+fs_avail_end
+
+;
+; fs_mount
+;	Mount a file system.
+;
+; Arguments --
+;	X - pointer to the fsops representing the file system to mount
+;	A - drive specifier for the mount (A: == 1)
+;
+; Returns --
+;	A - error code if mount fails (0 == no error, mount succeeded)
+;
+; Clobbers --
+;	None.
+;
+fs_mount
+	pshs	A,B,X,Y
+
+	; First, check to see if the fsops provided is currently
+	; mounted somewhere else.
+	ldy	#fs_drives
+	clrb
+1	cmpx	B,Y		; X same as fs_drives[idx]?
+	beq	fs_mount_ebusy
+	addb	#2		; next table offset
+	cmpb	#(fs_maxdrives * 2)
+	beq	1F		; finished scanning
+	bra	1B
+1
+	; Next, check to see if something is already mounted in this slot.
+	ldb	,S		; Get drive specifier
+	beq	fs_mount_einval	; invalid drive specifier
+	cmpb	#fs_maxdrives
+	bhi	fs_mount_einval	; invalid drive specifier
+	decb			; make 0-based index
+	aslb			; convert to table offset
+	tst	B,Y		; check the slot
+	bne	fs_mount_ebusy	; something already there.
+
+	; Ok, everything looks good.  Try to mount the file system.
+	jsr	[fsov_mount,X]
+	tsta			; error return?
+	bne	fs_mount_error
+
+	; Success!  Record the mount in the table.
+	stx	B,Y
+
+	; If no drive is currently selected, then select this one we
+	; just mounted.
+	lda	fs_curdrive
+	bne	1F
+	lda	,S		; Get drive specifier
+	sta	fs_curdrive
+1	clr	,S		; return 0 (no error) in A
+99	puls	A,B,X,Y,PC	; restore and return
+
+fs_mount_error
+	sta	,S		; error into A stack slot
+	bra	99B
+
+fs_mount_ebusy
+	lda	#EBUSY
+	bra	fs_mount_error
+
+fs_mount_einval
+	lda	#EINVAL
+	bra	fs_mount_error
+
+;
+; fs_ummount
+;	Unmount a file system.
+;
+; Arguments --
+;	A - drive specifier for the mount (A: == 1)
+;
+; Returns --
+;	A - error code if unmount fails (0 == no error, unmount succeeded)
+;
+; Clobbers --
+;	None.
+;
+fs_unmount
+	pshs	A,X,Y
+
+	tst	A
+	beq	fs_unmount_einval
+	cmpa	#fs_maxdrives
+	bhi	fs_unmount_einval
+
+	deca			; convert to 0-based index
+	asla			; index to table offset
+	ldx	#fs_drives
+	leax	A,X		; X points to drive slot
+	ldy	,X		; Y = fsops of file system
+	beq	fs_unmount_esrch
+
+	jsr	[fsov_unmount,Y]
+	clr	,X+		; zero out the drive slot
+	clr	,X+
+
+	; If we just unmounted the current drive, clear the current
+	; drive.
+	lda	fs_curdrive
+	cmpa	,S
+	bne	1F
+	clr	fs_curdrive
+1	clr	,S		; return 0 (no error) in A
+99	puls	A,X,Y,PC	; restore and return
+
+fs_unmount_error
+	sta	,S
+	bra	99B
+
+fs_unmount_einval
+	lda	#EINVAL
+	bra	fs_unmount_error
+
+fs_unmount_esrch
+	lda	#ESRCH
+	bra	fs_unmount_error
+
 ;
 ; file_open
 ;	Open a file.
