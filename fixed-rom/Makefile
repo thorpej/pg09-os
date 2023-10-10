@@ -31,7 +31,7 @@ sys-api:
 
 pg09-from.bin: Makefile build_date.s $(FROM_DEPS)
 	asm6809 $(CONFIGFLAGS) -l pg09-from.lst -s pg09-from.sym \
-	    -o $@ pg09-from.s
+	    -E pg09-from.exp -o $@ pg09-from.s
 	$(MAKE) sys-api
 
 clean_fram:

@@ -1,0 +1,2 @@
+fs_avail_end	equ	60019
+fs_avail	equ	60017
