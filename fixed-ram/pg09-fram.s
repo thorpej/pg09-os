@@ -64,6 +64,20 @@ current_iframe	rmb	2
 can_continue	rmb	1
 
 ;
+; File system "drive" letters A-H (8 total file system mounts).
+; Each slot is a pointer to the fsops for the mounted file system,
+; which in turn points to the device name, file system name, and
+; the fileops.
+;
+; "curdrive" is a 1-based index into the table; 0 means "no drive
+; is currently selected".
+;
+	export	fs_drives, fs_curdrive, fs_maxdrives
+fs_maxdrives	equ	8
+fs_drives	rmb	(fs_maxdrives * 2)
+fs_curdrive	rmb	1
+
+;
 ; Pull in RAM variables used by various device drivers.
 ;
 	if CONFIG_NHACP
