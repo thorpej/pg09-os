@@ -280,6 +280,7 @@ cold_boot
 	include "../lib/printhex.s"
 	include "../lib/printdec.s"
 	include "../lib/puts.s"
+	include "../lib/strcmp.s"
 	include "../lib/toupper.s"
 	include "../lib/mulDx10.s"
 	include "../lib/udiv16.s"
@@ -621,7 +622,7 @@ fs_setcur
 	tsta
 	beq	99F		; invalid drive specifier
 	cmpa	#fs_maxdrives
-	bhi			; invalid drive specifier
+	bhi	99F		; invalid drive specifier
 
 	deca			; convert to 0-based index
 	asla			; index to table offset
@@ -642,7 +643,9 @@ fs_setcur
 ;	Mount a file system.
 ;
 ; Arguments --
-;	X - pointer to the fsops representing the file system to mount
+;	X - pointer to NUL-terminated device name of fsops representing
+;	the file system to mount.
+;
 ;	A - drive specifier for the mount (A: == 1)
 ;
 ; Returns --
@@ -654,7 +657,37 @@ fs_setcur
 fs_mount
 	pshs	A,B,X,Y
 
-	; First, check to see if the fsops provided is currently
+	; Look up the fsops by the provided name.
+	ldx	#fs_avail
+	pshs	X
+	;
+	; 4,S	device name pointer argument
+	; 3,S	saved B
+	; 2,S	saved A
+	; 0,S	pointer to current slot in fs_avail
+	;
+1	cmpx	#fs_avail_end
+	beq	fs_mount_esrch	; file system not found
+
+	; Get the name pointer for the next candidate.  Since fsov_devname
+	; is the first field in the struct, we can use indirect addressing
+	; to load it.
+	ldy	[,X++]		; also advance to next slot
+	stx	,S		; remember next slot
+	ldx	4,S		; recover devname argument
+	jsr	strcmp		; compare names
+	beq	1F		; found a match!
+	ldx	,S		; recover next slot
+	bra	1B		; go try again
+
+1	; Pull the next slot back into X, and walk back to the slot
+	; that matched and load that pointer into X.
+	puls	X
+	ldx	,--X
+
+	; X now points to the matching fsops.
+
+	; Now, check to see if the fsops provided is currently
 	; mounted somewhere else.
 	ldy	#fs_drives
 	clrb
@@ -702,6 +735,11 @@ fs_mount_ebusy
 
 fs_mount_einval
 	lda	#EINVAL
+	bra	fs_mount_error
+
+fs_mount_esrch
+	leas	2,S		; pop temp from stack
+	lda	#ESRCH
 	bra	fs_mount_error
 
 ;
