@@ -553,6 +553,91 @@ fs_avail
 fs_avail_end
 
 ;
+; fs_atindex
+;	Look up and return the file system at the specified
+;	drive index.
+;
+; Arguments --
+;	A - drive specifier for the mount (A: == 1)
+;
+; Returns --
+;	X - pointer to fsops for mounted file system, NULL if none at
+;	that drive index.
+;
+; Clobbers --
+;	A
+;
+fs_atindex
+	tsta
+	beq	99F		; invalid drive specifier
+	cmpa	#fs_maxdrives
+	bhi	99F		; invalid drive specifier
+	deca			; convert to 0-based index
+	asla			; index to table offset
+	ldx	#fs_drives
+	ldx	A,X		; X = ops at drive slot
+	rts
+99
+	ldx	#0
+	rts
+
+;
+; fs_getcur
+;	Look up and return the current file system (drive).
+;
+; Arguments --
+;	None.
+;
+; Returns --
+;	X - pointer to fsops for the current drive, NULL if no drive
+;	currently selected.
+;
+; Clobbers --
+;	None.
+;
+fs_getcur
+	pshs	A
+	lda	fs_curdrive
+	bsr	fs_atindex
+	puls	A,PC
+
+;
+; fs_setcur
+;	Set the current file system (drive).
+;
+; Arguments --
+;	A - drive specifier for the mount (A: == 1)
+;
+; Returns --
+;	Sets Z if there is no file system at the specified slot,
+;	or if the slot is invalid.  Clears Z upon success.
+;
+; Clobbers --
+;	None.
+;
+fs_setcur
+	pshs	A,X
+
+	tsta
+	beq	99F		; invalid drive specifier
+	cmpa	#fs_maxdrives
+	bhi			; invalid drive specifier
+
+	deca			; convert to 0-based index
+	asla			; index to table offset
+	ldx	#fs_drives
+	ldx	A,X		; X = fsops pointer at specified slot
+	beq	99F		; no FS at this slot
+
+	lda	,S		; recover argument
+	sta	fs_curdrive	; set as current drive
+	andcc	#~CC_Z		; clear Z to indicate success
+98	puls	A,X,PC
+99
+	orcc	#CC_Z		; set Z to indicate failure
+	bra	98B
+
+;
 ; fs_mount
 ;	Mount a file system.
 ;
