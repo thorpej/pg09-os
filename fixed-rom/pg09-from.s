@@ -547,6 +547,7 @@ brom_call
 	;
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+	export	fs_avail, fs_avail_end
 fs_avail
 	if CONFIG_NHACP_W65C51
 	fdb	dacia_fsops
@@ -961,6 +962,8 @@ monitor_cmdtab
 	fcc	'?'+$80			; help
 	fcc	"OIN",'K'+$80		; not "moo".
 	fcc	"OF",'F'+$80		; power off system
+	fcc	"MOUN",'T'+$80		; mount file system
+	fcc	"UMOUN",'T'+$80		; unmount file system
 	fcc	0
 
 monitor_cmdjmptab
@@ -973,6 +976,8 @@ monitor_cmdjmptab
 	fdb	cmd_help
 	fdb	cmd_oink
 	fdb	cmd_off
+	fdb	cmd_mount
+	fdb	cmd_umount
 	fdb	cmd_unknown
 
 ;
@@ -1296,6 +1301,29 @@ cmd_help
 ;
 cmd_oink
 	BCall	"cmd_oink"
+	jmp	monitor_main
+
+;
+; cmd_mount
+;	Mount a file system.
+;
+;	mount uart1 a:		; mount UART1 at A:
+;	mount			; display mounted file systems
+;
+cmd_mount
+	jsr	iputs
+	fcn	"mount called\r\n"
+	jmp	monitor_main
+
+;
+; cmd_umount
+;	Unmount a file system.
+;
+;	umount a:		; unmount whatever is at A:
+;
+cmd_umount
+	jsr	iputs
+	fcn	"umount called\r\n"
 	jmp	monitor_main
 
 ;

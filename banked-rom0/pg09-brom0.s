@@ -34,8 +34,10 @@
 	include "../lib/asm_macros.inc"
 
 	include "../fixed-ram/pg09-fram.exp"
+	include "../fixed-rom/pg09-from.exp"
 
 	include "../sys-api/pg09-os.exp"
+	include "../sys-api/file-api.exp"
 
 	setdp	-1	; Disable automatic direct page addressing
 
@@ -333,6 +335,9 @@ monitor_helptab
 	fcc	"LOAD",'S'+$80		; load S-Records
 	fcc	"ADDR",'S'+$80		; symbolic addresses
 	fcc	"OF",'F'+$80		; power off the system
+	fcc	"MOUN",'T'+$80		; mount a file system
+	fcc	"UMOUN",'T'+$80		; unmount a file system
+	fcc	"FSDEV",'S'+$80		; file system devices
 	fcc	0
 
 monitor_helpjmptab
@@ -345,19 +350,24 @@ monitor_helpjmptab
 	fdb	cmd_help_loads
 	fdb	cmd_help_addrs
 	fdb	cmd_help_off
+	fdb	cmd_help_mount
+	fdb	cmd_help_umount
+	fdb	cmd_help_fsdevs
 	fdb	cmd_help_generic
 
 cmd_help_generic
 	jsr	iputs
 	fcc	"Available commands:\r\n"
-	fcc	"@     - access memory\r\n"
-	fcc	"C     - continue from debugger\r\n"
-	fcc	"J     - jump to address\r\n"
-	fcc	"R     - print / set register\r\n"
-	fcc	"LOADS - load S-Records\r\n"
-	fcc	"RESET - reset the system\r\n"
-	fcc	"OFF   - power off the system\r\n"
-	fcc	"?     - help\r\n"
+	fcc	"@      - access memory\r\n"
+	fcc	"C      - continue from debugger\r\n"
+	fcc	"J      - jump to address\r\n"
+	fcc	"R      - print / set register\r\n"
+	fcc	"LOADS  - load S-Records\r\n"
+	fcc	"RESET  - reset the system\r\n"
+	fcc	"OFF    - power off the system\r\n"
+	fcc	"MOUNT  - mount a file system\r\n"
+	fcc	"UMOUNT - unmount a file system\r\n"
+	fcc	"?      - help\r\n"
 	fcn	"Use '? <cmd>' for additional help.\r\n"
 	rts
 
@@ -436,6 +446,52 @@ cmd_help_off
 	fcc	"Powers off the system by asking the PMU to\r\n"
 	fcn	"switch off the ATX power supply.\r\n"
 	rts
+
+cmd_help_mount
+	jsr	iputs
+	fcc	"MOUNT fsdev drive - mount the file system on fsdev at drive\r\n"
+	fcc	"Example:\r\n"
+	fcc	"  MOUNT UART1 A:\r\n"
+	fcn	"Valid drives: A: - "
+	lda	#('A' + fs_maxdrives - 1)
+	jsr	[SysSubr_cons_putc]
+	jsr	iputs
+	fcc	":\r\n"
+	fcn	"Use '? fsdevs' for a list of file system devices.\r\n"
+	rts
+
+cmd_help_umount
+	jsr	iputs
+	fcc	"UMOUNT drive - unmount the file system at drive\r\n"
+	fcc	"Example:\r\n"
+	fcn	"  UMOUNT A:\r\n"
+	rts
+
+cmd_help_fsdevs
+	jsr	iputs
+	fcn	"Available file system devices:\r\n"
+	ldx	#fs_avail
+1	cmpx	#fs_avail_end
+	beq	99F
+
+	ldy	,X++		; get fsops pointer
+	pshs	X		; remember next slot on stack
+
+	jsr	iputs		; indent
+	fcn	"  "
+
+	ldx	fsov_devname,Y
+	jsr	puts
+	jsr	iputs
+	fcn	" ("
+	ldx	fsov_fsname,Y
+	jsr	puts
+	jsr	iputs
+	fcn	")\r\n"
+
+	puls	X		; pop next slot off stack
+	bra	1B
+99	rts
 
 ;
 ; cmd_oink
