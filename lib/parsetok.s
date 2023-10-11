@@ -26,11 +26,11 @@
 
 ;
 ; parsetok
-;	Parses a token.  Essentially, skips leading whitespace (which is
-;	required), remembers the location of the first non-whitespace
-;	character (the beginning of the token), and then skips again until
-;	whitespace or EOL is encountered and remembers that location as
-;	well.
+;	Parses a token.  Essentially, skips any leading whitespace,
+;	remembers the location of the first non-whitespace character
+;	(the beginning of the token), and then skips again until
+;	whitespace or EOL is encountered and remembers that location
+;	as well.
 ;
 ; Arguments --
 ;	X - pointer to the buffer to be parsed
@@ -49,7 +49,6 @@
 ;
 parsetok
 	bsr	parsews		; skip any whitespace (updates X)
-	beq	99F		; no whitespace, get out.
 	tst	,X		; *X == NUL?
 	beq	99F		; yes, get out.
 
