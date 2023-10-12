@@ -460,8 +460,8 @@ VDP_load_tiles
 	stb	VDP_REG_MODE1	; MODE1 <- addrL
 	sta	VDP_REG_MODE1	; MODE1 <- addrH + cmd
 
-2	ldb	#8		; put 8 bytes
-	lda	,X+		; A = next byte
+	ldb	#8		; put 8 bytes
+2	lda	,X+		; A = next byte
 	bsr	VDP_vram_put	; put byte into VRAM
 	decb			; decrement B
 	bne	2B		; != 0, copy more pattern bytes
