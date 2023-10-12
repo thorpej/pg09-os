@@ -90,6 +90,8 @@ VDP_tty_mode_desc
 	fdb	VDP_TXT_SATBA_DEFAULT
 	fdb	VDP_TXT_SPGBA_DEFAULT
 
+VDP_tty_cursor_ticks	equ	30	; 1/2 second cursor timer
+
 ;
 ; VDP_tty_init
 ;	Initialize the VDP TTY.
@@ -150,9 +152,11 @@ VDP_tty_init_common
 	; Set the display position for the current row/column.
 	jsr	VDP_tty_setpos
 
-	; Set the current cursor character to the cell character.
+	; Set the current cursor character to the cell character
+	; and enable the cursor.
 	lda	VDP_tty_cursor_savechar
 	sta	VDP_tty_cursor_curchar
+	jsr	VDP_tty_cursor_enable
 
 	;
 	; Force a repaint of the display by calling the VSYNC handler.
@@ -205,6 +209,12 @@ VDP_tty_setpos
 	lda	,X
 	sta	VDP_tty_cursor_savechar
 
+	; If the cursor is enabled, make sure it's visible in the new
+	; location.
+	lda	VDP_tty_cursor_timer
+	beq	1F		; cursor not enabled
+	clr	[VDP_tty_pos]
+1
 	puls	A,X,PC		; restore and return
 
 ;
@@ -232,7 +242,25 @@ VDP_tty_vsync
 	;
 	; Next, process the blinking cursor.
 	;
-	; XXX
+	lda	VDP_tty_cursor_timer
+	beq	10F		; cursor not enabled
+	dec	VDP_tty_cursor_timer
+	bne	10F		; not time to do anything yet
+
+	lda	#VDP_tty_cursor_ticks	; reset cursor timer
+	sta	VDP_tty_cursor_timer
+
+	lda	VDP_tty_cursor_curchar
+	beq	1F		; cursor currently visible, switch to cell
+
+	clra			; cell currently visible, switch to cursor
+	bra	2F
+1
+	lda	VDP_tty_cursor_savechar
+2
+	sta	VDP_tty_cursor_curchar
+	sta	[VDP_tty_pos]
+	bra	20F		; go repaint
 
 10	
 	;
@@ -260,6 +288,44 @@ VDP_tty_vsync
 
 	clr	VDP_tty_buf_dirty
 99	rts
+
+;
+; VDP_tty_cursor_enable
+;	Enable the cursor.
+;
+; Arguments --
+;	None.
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+VDP_tty_cursor_enable
+	pshs	A
+	lda	VDP_tty_cursor_timer
+	bne	1F			; already enabled
+	lda	#VDP_tty_cursor_ticks
+	sta	VDP_tty_cursor_timer
+1	puls	A,PC
+
+;
+; VDP_tty_cursor_diable
+;	Disable the cursor.
+;
+; Arguments --
+;	None.
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+VDP_tty_cursor_diable
+	clr	VDP_tty_cursor_timer
+	rts
 
 ;
 ; VDP_tty_scroll

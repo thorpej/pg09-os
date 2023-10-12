@@ -49,13 +49,13 @@ VDP_tty_row
 VDP_tty_pos
 	rmb	2
 
-	export VDP_tty_cursor_enabled, VDP_tty_cursor_savechar
-	export VDP_tty_cursor_curchar
-VDP_tty_cursor_enabled
-	rmb	1
+	export VDP_tty_cursor_savechar, VDP_tty_cursor_curchar
+	export VDP_tty_cursor_timer
 VDP_tty_cursor_savechar
 	rmb	1
 VDP_tty_cursor_curchar
+	rmb	1
+VDP_tty_cursor_timer
 	rmb	1
 
 	export VDP_tty_zerostart, VDP_tty_zerosize
