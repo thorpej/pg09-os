@@ -45,7 +45,11 @@
 ;	None.
 ;
 cons_init
-	jmp	acia_init
+	jsr	acia_init
+	if CONFIG_DISPLAY_TMS9918A
+	jsr	VDP_tty_init
+	endif
+	rts
 
 ;
 ; cons_reinit --
@@ -61,7 +65,11 @@ cons_init
 ;	None.
 ;
 cons_reinit
-	jmp	acia_reinit
+	jsr	acia_reinit
+	if CONFIG_DISPLAY_TMS9918A
+	jsr	VDP_tty_reinit
+	endif
+	rts
 
 ;
 ; cons_putc --
@@ -77,6 +85,9 @@ cons_reinit
 ;	None.
 ;
 cons_putc
+	if CONFIG_DISPLAY_TMS9918A
+	jsr	VDP_tty_putc
+	endif
 	jmp	acia_putchar
 
 ;
