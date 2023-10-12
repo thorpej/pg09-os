@@ -127,6 +127,14 @@ VDP_tty_reinit
 
 VDP_tty_init_common
 	;
+	; If the VSYNC handler still points to us, there is no
+	; other work to do.
+	;
+	ldx	#VDP_tty_vsync
+	cmpx	VDP_vsync_handler
+	beq	99F
+
+	;
 	; Set the mode to our text mode.  This disables the screen and
 	; clears the VSYNC handler.
 	;
@@ -168,6 +176,7 @@ VDP_tty_init_common
 	ldx	#VDP_tty_vsync
 	jsr	VDP_set_vsync_handler
 
+99
 	; Enable the screen.
 	jsr	VDP_screen_enable
 
