@@ -28,17 +28,17 @@
 ; Fixed ram variables for the VDP TTY driver.
 ;
 
-	export VDP_tty_cols, VDP_tty_rows, VDP_tty_bufsize
+	export VDP_tty_cols, VDP_tty_rows, VDP_tty_buf_size
 VDP_tty_cols			equ	40
 VDP_tty_rows			equ	24
-VDP_tty_bufsize			equ	(VDP_tty_cols * VDP_tty_rows)
+VDP_tty_buf_size		equ	(VDP_tty_cols * VDP_tty_rows)
 
-	export VDP_ttybuf, VDP_ttybuf_dirty
-VDP_ttybuf
-	rmb	VDP_tty_bufsize
-VDP_ttybuf_dirty
+	export VDP_tty_buf, VDP_tty_buf_dirty, VDP_tty_buf_locked
+VDP_tty_buf
+	rmb	VDP_tty_buf_size
+VDP_tty_buf_dirty
 	rmb	1
-VDP_ttybuf_locked
+VDP_tty_buf_locked
 	rmb	1
 
 	export VDP_tty_col, VDP_tty_row, VDP_tty_pos
@@ -59,5 +59,5 @@ VDP_tty_cursor_curchar
 	rmb	1
 
 	export VDP_tty_zerostart, VDP_tty_zerosize
-VDP_tty_zerostart		equ	VDP_ttybuf_dirty
+VDP_tty_zerostart		equ	VDP_tty_buf_dirty
 VDP_tty_zerosize		equ	9

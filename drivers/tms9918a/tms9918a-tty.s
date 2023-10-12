@@ -29,12 +29,12 @@
 ;
 
 VDP_TTY_LOCK	macro
-		inc	VDP_ttybuf_lock
+		inc	VDP_tty_buf_locked
 		endm
 
 VDP_TTY_UNLOCK_REPAINT	macro
-		inc	VDP_ttybuf_dirty
-		dec	VDP_ttybuf_lock
+		inc	VDP_tty_buf_dirty
+		dec	VDP_tty_buf_locked
 		endm
 
 ;
@@ -75,6 +75,21 @@ VDP_tty_rowaddrs
 	fdb	VDP_tty_buf + 23*VDP_tty_cols
 	fdb	FROM_START	; Phantom row - writes here are discarded
 
+VDP_tty_mode_desc
+	fcc	VDP_TXT_R0
+	fcc	VDP_TXT_R1
+	fcc	VDP_TXT_R2_DEFAULT
+	fcc	VDP_TXT_R3_DEFAULT
+	fcc	VDP_TXT_R4_DEFAULT
+	fcc	VDP_TXT_R5_DEFAULT
+	fcc	VDP_TXT_R6_DEFAULT
+	fcc	VDP_TXT_R7_DEFAULT
+	fdb	VDP_TXT_NTBA_DEFAULT
+	fdb	VDP_TXT_CTBA_DEFAULT
+	fdb	VDP_TXT_PGBA_DEFAULT
+	fdb	VDP_TXT_SATBA_DEFAULT
+	fdb	VDP_TXT_SPGBA_DEFAULT
+
 ;
 ; VDP_tty_init
 ;	Initialize the VDP TTY.
@@ -92,8 +107,8 @@ VDP_tty_init
 	pshs	A,B,X,Y		; Save registers
 
 	; Clear the TTY shadow buffer with spaces.
-	ldx	#VDP_ttybuf
-	ldy	#VDP_ttybufsize
+	ldx	#VDP_tty_buf
+	ldy	#VDP_tty_buf_size
 	lda	#' '
 	jsr	memset16
 
@@ -211,7 +226,7 @@ VDP_tty_vsync
 	; being in-flux.  If so, we just get out now and check again
 	; on the next VSYNC interrupt.
 	;
-	lda	VDP_ttybuf_locked
+	lda	VDP_tty_buf_locked
 	bne	99F
 
 	;
@@ -224,7 +239,7 @@ VDP_tty_vsync
 	; Now check to see if VRAM needs to be updated from the frame
 	; buffer.
 	;
-	lda	VDP_ttybuf_dirty
+	lda	VDP_tty_buf_dirty
 	beq	99F		; No work to do this frame.
 
 20
@@ -239,11 +254,11 @@ VDP_tty_vsync
 	jsr	VDP_set_address
 
 	; Copy in the current frame buffer image to the Name Table.
-	ldx	#VDP_ttybuf
-	ldy	#VDP_ttybufsize
+	ldx	#VDP_tty_buf
+	ldy	#VDP_tty_buf_size
 	jsr	VDP_copyin
 
-	clr	VDP_ttybuf_dirty
+	clr	VDP_tty_buf_dirty
 99	rts
 
 ;
@@ -263,9 +278,9 @@ VDP_tty_scroll
 	pshs	A,B,X,Y		; save registers
 
 	; Copy rows 1-23 up one row.
-	ldx	#VDP_tty_buf			  ; destination = row 0
-	ldy	#(VDP_tty_buf + VDP_tty_cols)	  ; source = row 1
-	ldd	#(VDP_tty_bufsize - VDP_tty_cols) ; length = size - 1 row
+	ldx	#VDP_tty_buf			   ; destination = row 0
+	ldy	#(VDP_tty_buf + VDP_tty_cols)	   ; source = row 1
+	ldd	#(VDP_tty_buf_size - VDP_tty_cols) ; length = size - 1 row
 	jsr	memcpy16
 
 	; Clear row 23.
