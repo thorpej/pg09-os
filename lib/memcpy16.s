@@ -52,7 +52,17 @@ memcpy16_common
 	;
 	leay	D,X		; Compute ending address
 	pshs	Y		; push it onto the stack
-	ldy	4,S		; recover source argument
+	;
+	; 7,S	Y (lsb)
+	; 6,S	Y (msb)
+	; 5,S	X (lsb)
+	; 4,S	X (msb)
+	; 3,S	D (lsb)
+	; 2,S	D (msb)
+	; 1,S	end address (lsb)
+	; 0,S	end address (msb)
+	;
+	ldy	6,S		; recover source argument
 1	ldb	,Y+		; B = *src++
 	stb	,X+		; *dst++ = B
 	cmpx	,S		; X == ending address?
