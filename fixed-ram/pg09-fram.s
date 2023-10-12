@@ -86,6 +86,7 @@ fs_curdrive	rmb	1
 	include "../drivers/display/display-ramvars.s"
 	if CONFIG_DISPLAY_TMS9918A
 	include "../drivers/tms9918a/tms9918a-ramvars.s"
+	include "../drivers/tms9918a/tms9918a-tty-ramvars.s"
 	endif
 	if CONFIG_NHACP_W65C51
 	include "../drivers/w65c51/w65c51-nhacp-ramvars.s"
