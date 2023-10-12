@@ -240,8 +240,9 @@ cold_boot
 	; Hello, world!
 	;
 	jsr	iputs
-	fcc	"@thorpej's 6809 Playground OS, version "
-	fcc	"0.4"		; Change version number here!
+	fcc	"@thorpej's 6809 Playground OS\r\n"
+	fcc	"Version "
+	fcc	"0.5"		; Change version number here!
 	fcc	"\r\n"
 	fcn	"Built: "
 	ldx	#build_date
@@ -270,6 +271,9 @@ cold_boot
 	; Library routines
 	;
 	include "../lib/memcpy8.s"
+	include "../lib/memcpy16.s"
+	include "../lib/memset8.s"
+	include "../lib/memset16.s"
 	include "../lib/memzero8.s"
 	include "../lib/memzero16.s"
 	include "../lib/parsedec.s"
@@ -305,6 +309,8 @@ cold_boot
 	if CONFIG_DISPLAY_TMS9918A
 	include "../sys-api/tms9918a-api.exp"
 	include "../drivers/tms9918a/tms9918a-base.s"
+	include "../drivers/tms9918a/tms9918a-tty.s"
+	include "../drivers/tms9918a/tms9918a-font-spleen.s"
 	endif
 	if CONFIG_NHACP_W65C51
 	include "../drivers/w65c51/w65c51-nhacp.s"
