@@ -1,0 +1,83 @@
+;
+; Copyright (c) 2023 Jason R. Thorpe.
+; All rights reserved.
+;
+; Redistribution and use in source and binary forms, with or without
+; modification, are permitted provided that the following conditions
+; are met:
+; 1. Redistributions of source code must retain the above copyright
+;    notice, this list of conditions and the following disclaimer.
+; 2. Redistributions in binary form must reproduce the above copyright
+;    notice, this list of conditions and the following disclaimer in the
+;    documentation and/or other materials provided with the distribution.
+;
+; THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+; IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+; OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+; IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+; INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+; BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+; AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+; OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+; OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+; SUCH DAMAGE.
+;
+
+	if	timer_api_exp_included
+	else
+timer_api_exp_included	equ	1
+
+;
+; Exports related to timers on the 6809 Playground.
+;
+; This ends up as part of the OS ABI, so don't change this unless you
+; know what you're doing!
+;
+; The following SysSubrs also support the timer API:
+;
+;	SysSubr_timer_add
+;	SysSubr_timer_remove
+;
+
+;
+; Timer object
+;
+;	u16	next		linked list linkage
+;	u16	callout		callout routine for when timer expires
+;	u8	t1		tick count 1
+;	u8	t0		tick count 0
+;
+; Timers are placed onto a linked list that is traversed at 60Hz.
+; If t0 == t1 == 0, no action is taken for that timer.  Otherwise
+; the ticks are decremented and when 0 is reached, the callout
+; routine is called (NULL is allowed to specify "no callout routine").
+;
+; Clients of the timer API can simply choose to wait for their timer
+; to each 0, or use the callout.  But exercise caution if using the
+; callout ... those routines are called from within the timer interrupt
+; context, meaning that interrupts are blocked, so callout routines
+; should do as little work as possible!
+;
+; T0 is decremented until it reaches 0, and then T1 is checked:
+; - If T1 is 0, then the timer is expired.
+; - If T1 is not 0, then it is decremented and T0 is reset to 255.
+;
+; Therefore, you can use either just T0 as an 8-bit timer, or T1 as
+; a 16-bit timer.  If using only T0, just make sure that the T1 byte
+; is initialized to 0!
+;
+; At 60Hz, each tick is 16,666us, or ~16ms.  The maximum 8-bit timer (255
+; ticks) is ~4.25s.  The maximum 16-bit timer (65535 ticks) is 1092s, or
+; ~18 minutes.
+;
+; When a program exits (and a warm boot happens), all timers are cleared
+; and system timers are re-initialized.
+;
+tmr_next			equ	0
+tmr_callout			equ	(tmr_next + 2)
+tmr_t1				equ	(tmr_callout + 2)
+tmr_t0				equ	(tmr_t1 + 1)
+tmr_tmrsz			equ	(tmr_t0 + 1)
+
+	endif	; timer_api_exp_included

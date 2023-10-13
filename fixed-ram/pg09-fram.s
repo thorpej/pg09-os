@@ -78,6 +78,13 @@ fs_drives	rmb	(fs_maxdrives * 2)
 fs_curdrive	rmb	1
 
 ;
+; Timer API maintains a list of timers registered with the system.
+;
+	export	timer_list
+timer_list
+	rmb	2
+
+;
 ; Pull in RAM variables used by various device drivers.
 ;
 	if CONFIG_NHACP

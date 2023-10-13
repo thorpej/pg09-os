@@ -264,7 +264,8 @@ VDP_intr
 	jsr	,X		; call the handler
 1	lda	VDP_REG_MODE1	; ensure the interrupt status is cleared
 
-	; XXX timer stuff
+	; We are the 60Hz timer source -- go process them.
+	jsr	timer_process
 
 	rti
 

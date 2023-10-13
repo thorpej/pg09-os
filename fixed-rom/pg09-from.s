@@ -39,6 +39,7 @@
 	include "../sys-api/pg09-os.exp"
 	include "../sys-api/display-api.exp"
 	include "../sys-api/file-api.exp"
+	include "../sys-api/timer-api.exp"
 
 	include "../banked-rom0/pg09-brom0.exp"
 
@@ -107,6 +108,11 @@ SysAddr_BankedROM_size		set	BROM_SIZE
 
 warm_boot
 	;
+	; Disable IRQs until we can reset the timers.
+	;
+	orcc	#CC_I
+
+	;
 	; Switch back to the kernel stack.
 	;
 	lds	#KSTACK_TOP
@@ -130,6 +136,11 @@ warm_boot
 	sta	IFF_CCR,X
 
 warmer_boot
+	;
+	; Disable IRQs until we can reset the timers.
+	;
+	orcc	#CC_I
+
 	ldy	#warm_boot
 	sty	IFE_SIZE,X
 	stx	current_iframe
@@ -139,6 +150,11 @@ warmer_boot
 	;
 	clra
 	tfr	A,DP
+
+	;
+	; Reset all timers.
+	;
+	jsr	timer_reset
 
 	;
 	; Re-initialize the console.
@@ -872,6 +888,141 @@ file_close
 	ldy	[fclose_fcb,X]
 	jsr	[fov_close,Y]
 	puls	Y,PC
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; Timer API
+	;
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;
+; timer_add
+;	Add a timer.
+;
+; Arguments --
+;	X - pointer to timer object
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+timer_add
+	pshs	X,Y		; save registers
+
+	; X = current element on list
+	; Y = address of last timer's "next" pointer
+
+	ldy	#timer_list
+1	ldx	,Y
+	beq	98F		; got NULL, insert at the tail
+	cmpx	,S		; equal to the argument?
+	beq	99F		; yes, just get out.
+	leay	tmr_next,X	; Y = &X->tmr_next
+	bra	1B		; check again
+
+98	ldx	,S		; recover timer argument
+	clr	tmr_next,X	; ensure new timer's "next" is NULL
+	clr	tmr_next+1,X
+	stx	,Y		; store the pointer
+
+99	puls	X,Y,PC		; restore and return
+
+;
+; timer_remove
+;	Remove a timer.
+;
+; Arguments --
+;	X - pointer to the timer object
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+timer_remove
+	pshs	X,Y		; save registers
+
+	; X = current element on list
+	; Y = address of last timer's "next" pointer
+
+	ldy	#timer_list
+1	ldx	,Y
+	beq	99F		; got NULL, no work to do
+	cmpx	,S		; equal to the argument?
+	beq	98F		; yes, go unlink it
+	leay	tmr_next,X	; Y = &X->tmr_next
+	bra	1B
+
+98	ldx	tmr_next,X	; X = X->tmr_next
+	stx	,Y		; *Y = X->tmr_next
+	ldx	,S		; recover timer argument
+	clr	tmr_next,X	; ensure timer's "next" is NULL
+	clr	tmr_next+1,X
+
+99	puls	X,Y,PC		; restore and return
+
+;
+; timer_process
+;	Process the registered timers.  This is called from whatever
+;	60Hz interrupt source we're using.
+;
+; Arguments --
+;	None.
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+timer_process
+	pshs	A,B,X		; save registers
+
+	; X = current element on list.  We can use it as the list head
+	; pointer as well, since the "next" pointer is the first field
+	; in the object.
+
+	ldx	#timer_list
+1	ldx	tmr_next,X	; X = X->tmr_next
+	beq	99F		; got NULL, get out
+
+	ldd	tmr_t1,X	; D = remaining ticks
+	beq	1B		; timer not active, get next timer
+
+	subd	#1		; Decrement timer.
+	std	tmr_t1,X	; store remaining ticks
+	bne	1B		; timer not yet 0, get next timer
+
+	ldd	tmr_callout,X	; callout routine set?
+	beq	1B		; no, get next timer
+
+	jsr	[tmr_callout,X]	; call callout routine
+	bra	1B		; get next timer
+
+99	puls	A,B,X,PC	; restore and return
+
+;
+; timer_reset
+;	Reset all of the timers.  Called at warm boot.  Any timer
+;	that wishes to persist must re-register.
+;
+; Arguments --
+;	None.
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+timer_reset
+	pshs	A,B		; save registers
+	ldd	#0		; D = 0
+	std	timer_list	; timer_list = NULL (atomic wrt. interrupts)
+	puls	A,B,PC		; restore and return
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;
