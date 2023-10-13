@@ -100,7 +100,7 @@ nhacp_drain
 	beq	99F
 	subd	#1
 	std	nhctx_reply_len,U
-	jsr	[nhctx_getc,U]
+	bsr	nhacp_getc
 	bra	nhacp_drain
 99	rts
 
@@ -123,11 +123,34 @@ nhacp_get_reply_byte
 	bmi	99F		; or, gasp, negative?
 	subd	#1		; decrement length
 	std	nhctx_reply_len,U
-	jsr	[nhctx_getc,U]	; get the byte
+	bsr	nhacp_getc	; get the byte
 	rts
 99
 	clra			; return 0s if we're over.
 	rts
+
+;
+; nhacp_getc
+;	Get a byte from the NHACP interface.
+;
+; Arguments --
+;	U - NHACP context
+;
+; Returns --
+;	A - the byte
+;
+;	CC_Z is set if no byte was available before the timeout expired,
+;	clear if a byte was successfully received.
+;
+; Clobbers --
+;	None.
+;
+nhacp_getc
+	jsr	[nhctx_pollc,U]
+	bne	99F
+	; XXX test the timer.
+	bra	nhacp_getc
+99	rts
 
 ;
 ; nhacp_get_reply_hdr
@@ -146,44 +169,19 @@ nhacp_get_reply_byte
 nhacp_get_reply_hdr
 	lda	nhctx_session,U	; check for dead session
 	beq	99F
-	jsr	[nhctx_getc,U]	; get LSB of reply length
-	sta	nhctx_reply_len+1,U ; store it in big-endian order
-	jsr	[nhctx_getc,U]	; get MSB if reply length
+	bsr	nhacp_getc	     ; get LSB of reply length
+	sta	nhctx_reply_len+1,U  ; store it in big-endian order
+	bsr	nhacp_getc	     ; get MSB if reply length
 	sta	nhctx_reply_len,U
-	ora	nhctx_reply_len+1,U ; check for zero length
+	ora	nhctx_reply_len+1,U  ; check for zero length
 	beq	99F
 	bsr	nhacp_get_reply_byte ; get msg type
 	sta	nhctx_reply_type,U
-	andcc	#~CC_Z		; make sure Z is not set
+	andcc	#~CC_Z		     ; make sure Z is not set
 	rts
 99
 	clr	nhctx_reply_len,U   ; zero reply length
 	clr	nhctx_reply_len+1,U ; sets Z
-	rts
-
-;
-; nhacp_req_init0 --
-;	This does the real work for nhacp_req_init().
-;
-; Arguments --
-;	A - request type
-;	B - request length
-;	U - NHACP context
-;
-; Returns --
-;	None.
-;
-; Clobbers --
-;	None.
-;
-nhacp_req_init0
-	; Initialize the context fields.
-	sta	nhctx_req_type,U
-	stb	nhctx_reqlen,U
-	clr	nhctx_datalen,U
-	clr	nhctx_datalen+1,U
-	clr	nhctx_timer+tmr_t1,U
-	clr	nhctx_timer+tmr_t0,U
 	rts
 
 ;
@@ -231,17 +229,6 @@ nhacp_req_send
 	;
 99	rts
 
-nhacp_HELLO_template
-	fcc	$8f		; NHACP-REQUEST
-	fcc	$00		; session ID
-	fcc	$08,$00		; frame length
-	fcc	$00		; type
-	fcc	"ACP"		; magic
-	fcc	$01,$00		; version 0.1
-	fcc	$00,$00		; options = $0000
-
-nhacp_HELLO_template_len	equ	12
-
 ;
 ; nhacp_start_system_session
 ;	Start an NHACP system session.
@@ -287,7 +274,7 @@ nhacp_start_session_common
 	lda	nhctx_reply_type,U
 	cmpa	#NHACP_RESP_SESSION_STARTED
 	bne	98F		; ERROR or unexpected reply
-	jsr	[nhctx_getc,U]	; get the session ID
+	bsr	nhacp_getc	; get the session ID
 	inca			; add 1 for dead session detection
 	sta	nhctx_session,U	; store session
 	jsr	nhacp_drain	; don't care about the rest of the reply
@@ -298,6 +285,17 @@ nhacp_start_session_common
 99
 	clr	nhctx_session,U	; mark session dead, sets Z
 	rts
+
+nhacp_HELLO_template
+	fcc	$8f		; NHACP-REQUEST
+	fcc	$00		; session ID
+	fcc	$08,$00		; frame length
+	fcc	$00		; type
+	fcc	"ACP"		; magic
+	fcc	$01,$00		; version 0.1
+	fcc	$00,$00		; options = $0000
+
+nhacp_HELLO_template_len	equ	12
 
 ;
 ; nhacp_end_session
@@ -317,3 +315,28 @@ nhacp_end_session
 	jsr	nhacp_req_send
 	clr	nhctx_session,U	; invalidate session.
 	rts			; no reply to a GOODBYE message
+
+;
+; nhacp_req_init0 --
+;	This does the real work for nhacp_req_init().
+;
+; Arguments --
+;	A - request type
+;	B - request length
+;	U - NHACP context
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+nhacp_req_init0
+	; Initialize the context fields.
+	sta	nhctx_req_type,U
+	stb	nhctx_reqlen,U
+	clr	nhctx_datalen,U
+	clr	nhctx_datalen+1,U
+	clr	nhctx_timer+tmr_t1,U
+	clr	nhctx_timer+tmr_t0,U
+	rts

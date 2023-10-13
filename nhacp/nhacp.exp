@@ -43,8 +43,8 @@
 ;	timer	I/O timeout timer (tmr_tmrsz [6] bytes)
 ;	u8[22]	req/reply scratch buffer	XXX can we shrink this?
 ;
-nhctx_getc		equ	0
-nhctx_putc		equ	(nhctx_getc + 2)
+nhctx_pollc		equ	0
+nhctx_putc		equ	(nhctx_pollc + 2)
 nhctx_data		equ	(nhctx_putc + 2)
 nhctx_datalen		equ	(nhctx_data + 2)
 nhctx_session		equ	(nhctx_datalen + 2)

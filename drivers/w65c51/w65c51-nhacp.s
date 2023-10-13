@@ -180,8 +180,8 @@ dacia_fs_mount
 
 	; Initialize our NHACP context.
 	ldu	#dacia_nhacp_context
-	ldd	#dacia_getchar
-	std	nhctx_getc,U
+	ldd	#dacia_pollchar
+	std	nhctx_pollc,U
 	ldd	#dacia_putchar
 	std	nhctx_putc,U
 
