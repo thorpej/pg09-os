@@ -32,7 +32,7 @@
 ;
 
 ;
-; NHACP context - 32 bytes
+; NHACP context - 38 bytes
 ;
 ;	u16	getc routine
 ;	u16	putc routine
@@ -40,7 +40,8 @@
 ;	u16	data length
 ;	u8	session ID + 1 (0 == $FF+1 == invalid session)
 ;	u8	request length
-;	u8[22]	req/reply scratch buffer
+;	timer	I/O timeout timer (tmr_tmrsz [6] bytes)
+;	u8[22]	req/reply scratch buffer	XXX can we shrink this?
 ;
 nhctx_getc		equ	0
 nhctx_putc		equ	(nhctx_getc + 2)
@@ -48,7 +49,8 @@ nhctx_data		equ	(nhctx_putc + 2)
 nhctx_datalen		equ	(nhctx_data + 2)
 nhctx_session		equ	(nhctx_datalen + 2)
 nhctx_reqlen		equ	(nhctx_session + 1)
-nhctx_scratch		equ	(nhctx_reqlen + 1)
+nhctx_timer		equ	(nhctx_reqlen + 1)
+nhctx_scratch		equ	(nhctx_timer + tmr_tmrsz)
 nhctx_req		equ	nhctx_scratch
 nhctx_reply		equ	nhctx_scratch
 nhctx_ctxsz		equ	(nhctx_scratch + 22)

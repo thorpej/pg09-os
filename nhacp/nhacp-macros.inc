@@ -47,3 +47,56 @@ nhacp_req_init		macro
 	ldb	#NHACP_MSG_\1_len
 	jsr	nhacp_req_init0
 	endm
+
+;
+; nhacp_timer_arm --
+;	Arm the NHACP timeout timer.
+;
+; Arguments --
+;	U - NHACP context
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+nhacp_timer_arm		macro
+	clr	nhctx_timer+tmr_t0,U
+	dec	nhctx_timer+tmr_t0,U	; 255 ticks - ~4.25s
+	endm
+
+;
+; nhacp_timer_disarm --
+;	Disarm the NHACP timeout timer.
+;
+; Arguments --
+;	U - NHACP context
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+nhacp_timer_disarm	macro
+	clr	nhctx_timer+tmr_t0,U
+	endm
+
+;
+; nhacp_timer_expired --
+;	Check if the NHACP timer has expired.
+;
+; Arguments --
+;	U - NHACP context
+;
+; Returns --
+;	CC_Z is set if the timer has expired (reached zero), cleared
+;	if the timer is still pending.
+;
+; Clobbers --
+;	None.
+;
+nhacp_timer_expired	macro
+	tst	nhctx_timer+tmr_t0,U
+	endm

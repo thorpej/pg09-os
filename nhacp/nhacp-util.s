@@ -1,4 +1,4 @@
-;
+288;
 ; Copyright (c) 2023 Jason R. Thorpe.
 ; All rights reserved.
 ;
@@ -182,6 +182,8 @@ nhacp_req_init0
 	stb	nhctx_reqlen,U
 	clr	nhctx_datalen,U
 	clr	nhctx_datalen+1,U
+	clr	nhctx_timer+tmr_t1,U
+	clr	nhctx_timer+tmr_t0,U
 	rts
 
 ;

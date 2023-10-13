@@ -30,6 +30,7 @@
 
 	include "../../pg09-system/asm/pg09_defs.s"
 	include "../drivers/mc6809/mc6809_defs.s"
+	include "../sys-api/timer-api.exp"
 
 	org	FRAM_START
 
