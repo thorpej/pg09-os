@@ -165,7 +165,8 @@ nhacp_get_reply_byte
 nhacp_getc
 	jsr	[nhctx_pollc,U]
 	bne	99F
-	; XXX test the timer.
+	nhacp_timer_expired
+	beq	99F
 	bra	nhacp_getc
 99	rts
 
