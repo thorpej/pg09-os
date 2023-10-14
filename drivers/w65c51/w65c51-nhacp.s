@@ -185,11 +185,15 @@ dacia_fs_mount
 	ldd	#dacia_putchar
 	std	nhctx_putc,U
 
+	; Default to I/O error.  We'll set this to 0 if starting
+	; the session succeeds.
+	lda	#EIO
+	sta	,S
+
 	; Start a system session with the server.
 	jsr	nhacp_start_system_session
-
-	; XXX Real error handling, please!
-	clr	,S
+	beq	99F		; failed to start session
+	clr	,S		; success!
 
 99	puls	A,B,X,Y,U,PC
 
