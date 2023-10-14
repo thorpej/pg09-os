@@ -42,7 +42,7 @@ nhacp_fsname
 ;	D - byte count
 ;
 ; Returns --
-;	None.
+;	CC_Z is set if a timeout occurs, clear if OK.
 ;
 ; Clobbers --
 ;	D, X, Y
@@ -51,10 +51,15 @@ nhacp_copyin
 	leay	D,X		; Y = end pointer
 	pshs	Y		; push it onto stack
 1	jsr	nhacp_get_reply_byte ; get byte from server
+	beq	99F		; handle timeout
 	sta	,X+		; store byte, advance buffer pointer
 	cmpx	,S		; At the end?
 	bne	1B		; Nope, go get more data
-	puls	Y,PC		; pop Y (clobber) and return
+	andcc	#~CC_Z		; did not time out
+98	puls	Y,PC		; pop Y (clobber) and return
+99
+	jsr	nhacp_invalidate_session
+	bra	98B
 
 ;
 ; nhacp_copyout
@@ -116,6 +121,8 @@ nhacp_drain
 ; Returns --
 ;	A - fetched byte
 ;
+;	CC_Z is set if a timeout occurs, cleared if OK.
+;
 ; Clobbers --
 ;	A, B
 ;
@@ -125,10 +132,11 @@ nhacp_get_reply_byte
 	bmi	99F		; or, gasp, negative?
 	subd	#1		; decrement length
 	std	nhctx_reply_len,U
-	bsr	nhacp_getc	; get the byte
+	bsr	nhacp_getc	; get the byte, handles CC_Z for us.
 	rts
 99
 	clra			; return 0s if we're over.
+	andcc	#~CC_Z		; but don't treat this as a framing error
 	rts
 
 ;
@@ -162,74 +170,35 @@ nhacp_getc
 ;	U - NHACP context
 ;
 ; Returns --
-;	Z is set if no reply was received (either dead session or
+;	Z is set if no reply was received (either timeout / dead session or
 ;	zero length frame).
 ;
 ; Clobbers --
 ;	A, B
 ;
 nhacp_get_reply_hdr
-	lda	nhctx_session,U	; check for dead session
+	lda	nhctx_session,U	     ; check for dead session
 	beq	99F
 	bsr	nhacp_getc	     ; get LSB of reply length
+	beq	98F		     ; check for timeout
 	sta	nhctx_reply_len+1,U  ; store it in big-endian order
 	bsr	nhacp_getc	     ; get MSB if reply length
+	beq	98F		     ; check for timeout
 	sta	nhctx_reply_len,U
 	ora	nhctx_reply_len+1,U  ; check for zero length
 	beq	99F
 	bsr	nhacp_get_reply_byte ; get msg type
+	beq	98F		     ; check for timeout
 	sta	nhctx_reply_type,U
 	andcc	#~CC_Z		     ; make sure Z is not set
 	rts
+98
+	; Timeout occurred, invalidate session.
+	jsr	nhacp_invalidate_session
 99
 	clr	nhctx_reply_len,U   ; zero reply length
 	clr	nhctx_reply_len+1,U ; sets Z
 	rts
-
-;
-; nhacp_req_send --
-;	Send an NHACP request.
-;
-; Arguments --
-;	U - NHACP context
-;
-; Returns --
-;	None.
-;
-; Clobbers --
-;	A, B, X, Y
-;
-nhacp_req_send
-	; Initialize the frame header.
-	lda	#$8f		; NHACP-REQUEST
-	sta	nhctx_req,U
-	clra
-	ldb	nhctx_reqlen,U
-	addd	nhctx_datalen,U
-	stb	nhctx_req_flen,U
-	sta	nhctx_req_flen+1,U
-	lda	nhctx_session,U
-	beq	99F		; dead session
-	deca			; convert to actual dession ID
-	sta	nhctx_req_session,U
-
-	; Send request header.
-	leax	nhctx_req,U
-	clra
-	ldb	nhctx_reqlen,U
-	jsr	nhacp_copyout
-
-	; Send data buffer.
-	ldd	nhctx_datalen,U
-	beq	99F		; no data to send
-	ldx	nhctx_data,U
-	jsr	nhacp_copyout
-	;
-	; If we get here because of a dead session, no worries.
-	; the fetching of the reply will also detect dead session
-	; and fake up an error reply.
-	;
-99	rts
 
 ;
 ; nhacp_start_system_session
@@ -290,6 +259,51 @@ nhacp_start_session_common
 	rts
 
 ;
+; nhacp_req_send --
+;	Send an NHACP request.
+;
+; Arguments --
+;	U - NHACP context
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	A, B, X, Y
+;
+nhacp_req_send
+	; Initialize the frame header.
+	lda	#$8f		; NHACP-REQUEST
+	sta	nhctx_req,U
+	clra
+	ldb	nhctx_reqlen,U
+	addd	nhctx_datalen,U
+	stb	nhctx_req_flen,U
+	sta	nhctx_req_flen+1,U
+	lda	nhctx_session,U
+	beq	99F		; dead session
+	deca			; convert to actual dession ID
+	sta	nhctx_req_session,U
+
+	; Send request header.
+	leax	nhctx_req,U
+	clra
+	ldb	nhctx_reqlen,U
+	jsr	nhacp_copyout
+
+	; Send data buffer.
+	ldd	nhctx_datalen,U
+	beq	99F		; no data to send
+	ldx	nhctx_data,U
+	jsr	nhacp_copyout
+	;
+	; If we get here because of a dead session, no worries.
+	; the fetching of the reply will also detect dead session
+	; and fake up an error reply.
+	;
+99	rts
+
+;
 ; nhacp_invalidate_session --
 ;	Invalidate the NHACP session.  This is called when we
 ;	detect a framing error.
@@ -298,7 +312,7 @@ nhacp_start_session_common
 ;	U - NHACP context
 ;
 ; Returns --
-;	None.
+;	CC_Z is set upon return.
 ;
 ; Clobbers --
 ;	None.
