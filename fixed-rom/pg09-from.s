@@ -925,6 +925,8 @@ timer_add
 98	ldx	,S		; recover timer argument
 	clr	tmr_next,X	; ensure new timer's "next" is NULL
 	clr	tmr_next+1,X
+	clr	tmr_t1,X	; ensure the timer is not armed
+	clr	tmr_t0,X
 	stx	,Y		; store the pointer
 
 99	puls	X,Y,PC		; restore and return
