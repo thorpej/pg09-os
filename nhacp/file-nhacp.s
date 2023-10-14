@@ -115,6 +115,7 @@ file_nhacp_open
 	; Get the file descriptor.  We don't care about
 	; the rest of the reply.
 	jsr	nhacp_get_reply_byte
+	lbeq	file_nhacp_io_eio	; handle receive timeout
 	ldy	,S		; get saved FCB pointer (but don't pop)
 	inca			; we save it as fdesc+1
 	sta	fcb_nhacp_fd,Y	; save fdesc in FCB
@@ -306,18 +307,21 @@ file_nhacp_io_read
 
 	; Get returned length into D.
 	jsr	nhacp_get_reply_byte
+	lbeq	file_nhacp_io_eio	; handle receive timeout
 	pshs	A		; LSB
 	jsr	nhacp_get_reply_byte
 	puls	B		; D now contains returned length
+	lbeq	file_nhacp_io_eio	; handle receive timeout
 
 	cmpd	#0		; actual == 0?
-	beq	file_nhacp_io_done
+	lbeq	file_nhacp_io_done
 
 	ldy	,S		; recover FCB
 	ldx	fcb_nhacp_ptr,Y	; X = current data pointer
 	pshs	D,Y		; preserve D,Y
 	jsr	nhacp_copyin	; get data from interface
 	puls	D,Y		; restore D,Y
+	beq	file_nhacp_io_eio	; handle receive timeout
 
 	lbsr	file_nhacp_io_advance
 	bra	file_nhacp_io_read
@@ -362,9 +366,11 @@ file_nhacp_io_pread
 
 	; Get returned length into D.
 	jsr	nhacp_get_reply_byte
+	beq	file_nhacp_io_eio	; handle receive timeout
 	pshs	A		; LSB
 	jsr	nhacp_get_reply_byte
 	puls	B		; D now contains returned length
+	beq	file_nhacp_io_eio	; handle receive timeout
 
 	cmpd	#0		; actual == 0?
 	beq	file_nhacp_io_done
@@ -374,6 +380,7 @@ file_nhacp_io_pread
 	pshs	D,Y		; preserve D,Y
 	jsr	nhacp_copyin	; get data from interface
 	puls	D,Y		; restore D,Y
+	beq	file_nhacp_io_eio	; handle receive timeout
 
 	lbsr	file_nhacp_io_advance_offset
 	bra	file_nhacp_io_pread
@@ -551,6 +558,7 @@ file_nhacp_io_seek
 	ldx	4,S		; recover args pointer
 	ldb	fio_offset+3
 1	jsr	nhacp_get_reply_byte
+	lbeq	file_nhacp_io_eio	; handle receive timeout
 	sta	B,X
 	decb
 	cmpb	#fio_offset
