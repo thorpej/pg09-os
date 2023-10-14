@@ -199,4 +199,6 @@ ENSESS				equ	19
 EAGAIN				equ	20
 EROFS				equ	21
 
+ELASTERR			equ	EROFS
+
 	endif	; file_api_exp_included

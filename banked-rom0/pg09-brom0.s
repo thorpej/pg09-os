@@ -51,6 +51,7 @@
 	BCall_decl cmd_loads
 	BCall_decl cmd_help
 	BCall_decl cmd_oink
+	BCall_decl errorstr_print
 
 ;
 ; Code goes here.
@@ -66,6 +67,109 @@
 	include	"../lib/puts.s"
 	include "../lib/toupper.s"
 	include "../lib/udiv16.s"
+
+;
+; errorstr_print
+;	Print an error string corresponding to a standard
+;	(file-api, NHACP) error code.
+;
+; Arguments --
+;	A - error code
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+errorstr_print
+	pshs	A,X		; save registers
+
+	tsta			; A == 0?
+	beq	20F		; yes, unknown error case
+
+	cmpa	#ELASTERR	; A > ELASTERR?
+	bhi	20F		; yes, unknown error case
+
+	deca			; 0 is skipped in the table
+	asla			; index to offset
+	ldx	#errorstr_tab
+	ldx	A,X		; X = pointer to string
+	jsr	puts		; print it
+	bra	99F		; done!
+
+20	jsr	iputs
+	fcn	"unknown error "
+	jsr	printdec8
+
+99	puls	A,X,PC		; restore and return
+
+errorstr_tab
+	;	0 is skipped
+	fdb	errorstr_enotsup
+	fdb	errorstr_eperm
+	fdb	errorstr_enoent
+	fdb	errorstr_eio
+	fdb	errorstr_ebadf
+	fdb	errorstr_enomem
+	fdb	errorstr_eacces
+	fdb	errorstr_ebusy
+	fdb	errorstr_eexist
+	fdb	errorstr_eisdir
+	fdb	errorstr_einval
+	fdb	errorstr_enfile
+	fdb	errorstr_efbig
+	fdb	errorstr_enospc
+	fdb	errorstr_eseek
+	fdb	errorstr_enotdir
+	fdb	errorstr_enotempty
+	fdb	errorstr_esrch
+	fdb	errorstr_ensess
+	fdb	errorstr_eagain
+	fdb	errorstr_erofs
+
+errorstr_enotsup
+	fcn	"operation not supported"
+errorstr_eperm
+	fcn	"operation not permitted"
+errorstr_enoent
+	fcn	"requested file does not exist"
+errorstr_eio
+	fcn	"I/O error"
+errorstr_ebadf
+	fcn	"bad file descriptor"
+errorstr_enomem
+	fcn	"out of memory"
+errorstr_eacces
+	fcn	"access denied"
+errorstr_ebusy
+	fcn	"resource is busy"
+errorstr_eexist
+	fcn	"file already exists"
+errorstr_eisdir
+	fcn	"file is a directory"
+errorstr_einval
+	fcn	"invalid argument"
+errorstr_enfile
+	fcn	"too many open files"
+errorstr_efbig
+	fcn	"file is too large"
+errorstr_enospc
+	fcn	"out of space"
+errorstr_eseek
+	fcn	"illegal seek"
+errorstr_enotdir
+	fcn	"file is not a directory"
+errorstr_enotempty
+	fcn	"directory is not empty"
+errorstr_esrch
+	fcn	"no such process or session"
+errorstr_ensess
+	fcn	"too many sessions"
+errorstr_eagain
+	fcn	"try again later"
+errorstr_erofs
+	fcn	"storage object is write-protected"
 
 error
 	jsr	iputs

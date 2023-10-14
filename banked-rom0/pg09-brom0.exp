@@ -38,5 +38,7 @@ BCall_cmd_oink_bank equ 0
 BCall_cmd_oink_slot equ 49158
 BCall_cmd_reg_bank equ 0
 BCall_cmd_reg_slot equ 49152
+BCall_errorstr_print_bank equ 0
+BCall_errorstr_print_slot equ 49160
 
 	endif	; pg09_brom0_exp_included

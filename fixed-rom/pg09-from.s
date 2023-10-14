@@ -1532,9 +1532,8 @@ cmd_mount
 	tsta			; check for error
 	lbeq	monitor_main	; no error, back to main loop
 
-	jsr	iputs
-	fcn	"ERROR: code "
-	jsr	printdec8
+	jsr	error
+	BCall	"errorstr_print"
 	jsr	puts_crlf
 	jmp	monitor_main
 
