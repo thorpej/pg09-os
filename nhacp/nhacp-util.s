@@ -90,18 +90,20 @@ nhacp_copyout
 ;	U - NHACP context
 ;
 ; Returns --
-;	None.
+;	CC_Z is set if a timeout occurs, clear otherwize.
 ;
 ; Clobbers --
 ;	D
 ;
 nhacp_drain
 	ldd	nhctx_reply_len,U
-	beq	99F
+	beq	98F
 	subd	#1
 	std	nhctx_reply_len,U
 	bsr	nhacp_getc
+	beq	99F
 	bra	nhacp_drain
+98	andcc	#~CC_Z
 99	rts
 
 ;
@@ -278,12 +280,31 @@ nhacp_start_session_common
 	inca			; add 1 for dead session detection
 	sta	nhctx_session,U	; store session
 	jsr	nhacp_drain	; don't care about the rest of the reply
+	beq	99F		; framing error from server, kill session
 	andcc	#~CC_Z		; make sure Z is cleared
 	rts
 98
 	jsr	nhacp_drain	; drain residual count
 99
 	clr	nhctx_session,U	; mark session dead, sets Z
+	rts
+
+;
+; nhacp_invalidate_session --
+;	Invalidate the NHACP session.  This is called when we
+;	detect a framing error.
+;
+; Arguments --
+;	U - NHACP context
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+nhacp_invalidate_session
+	clr	nhctx_session,U	; mark session dead
 	rts
 
 nhacp_HELLO_template

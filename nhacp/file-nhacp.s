@@ -398,7 +398,15 @@ file_nhacp_io_error
 	puls	Y		; get saved FCB pointer
 	sta	fcb_error,Y
 	jsr	nhacp_drain	; drain off the rest of the reply
-	puls	A,B,X,Y,U,PC	; restore and return
+	beq	99F		; kill session if framing error
+98	puls	A,B,X,Y,U,PC	; restore and return
+
+99	lbeq	nhacp_invalidate_session ; kill session
+	tst	fcb_error,Y		 ; error already set?
+	bne	98B			 ; yes, just get out.
+	lda	#EIO			 ; default to EIO
+	sta	fcb_error,Y
+	bra	98B
 
 file_nhacp_io_write
 	nhacp_req_init "FILE_WRITE"
