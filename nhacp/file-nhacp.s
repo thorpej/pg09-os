@@ -392,6 +392,8 @@ file_nhacp_io_pread
 file_nhacp_io_error_reply
 	; Get the error code from the reply.
 	jsr	nhacp_get_reply_byte
+	beq	file_nhacp_io_eio	; timeout -> EIO
+	tsta
 	bne	file_nhacp_io_error	; error != 0, cool cool.
 					; error == 0, map to EIO
 file_nhacp_io_eio

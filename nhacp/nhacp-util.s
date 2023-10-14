@@ -1,4 +1,4 @@
-288;
+;
 ; Copyright (c) 2023 Jason R. Thorpe.
 ; All rights reserved.
 ;
@@ -197,7 +197,7 @@ nhacp_get_reply_hdr
 	sta	nhctx_reply_len,U
 	ora	nhctx_reply_len+1,U  ; check for zero length
 	beq	99F
-	bsr	nhacp_get_reply_byte ; get msg type
+	lbsr	nhacp_get_reply_byte ; get msg type
 	beq	98F		     ; check for timeout
 	sta	nhctx_reply_type,U
 	andcc	#~CC_Z		     ; make sure Z is not set
@@ -219,7 +219,7 @@ nhacp_get_reply_hdr
 ;	U - NHACP context
 ;
 ; Returns --
-;	Z set if unable to start session.
+;	A - error code if session setup fails (0 == no error)
 ;
 ; Clobbers --
 ;	A, B, X, Y
@@ -245,6 +245,17 @@ nhacp_start_session_common
 	jsr	memcpy8
 	stb	nhctx_req_session,U
 
+	; Store a dummy session ID in the context while we
+	; process the request.
+	lda	#$FF
+	sta	nhctx_session,U
+
+	; Add this context's timer to the system.
+	leax	nhctx_timer,U
+	clr	tmr_callout,X		; no callout, we just check for
+	clr	tmr_callout+1,X		; expiration
+	jsr	timer_add
+
 	; Send request.
 	leax	nhctx_req,U
 	ldd	#nhacp_HELLO_template_len
@@ -252,22 +263,46 @@ nhacp_start_session_common
 
 	; Receive the reply.
 	jsr	nhacp_get_reply_hdr
-	beq	99F
+	beq	nhacp_start_session_eagain ; timed out
+
+	; Check for ERROR reply.
 	lda	nhctx_reply_type,U
+	cmpa	#NHACP_RESP_ERROR
+	beq	nhacp_start_session_error_reply
+
+	; Unknown error if not SESSION_STARTED.
 	cmpa	#NHACP_RESP_SESSION_STARTED
-	bne	98F		; ERROR or unexpected reply
-	bsr	nhacp_getc	; get the session ID
+	bne	nhacp_start_session_eio
+
+	; Get the session ID.
+	jsr	nhacp_get_reply_byte
+	beq	nhacp_start_session_eagain ; timed out
 	inca			; add 1 for dead session detection
 	sta	nhctx_session,U	; store session
 	jsr	nhacp_drain	; don't care about the rest of the reply
-	beq	99F		; framing error from server, kill session
-	andcc	#~CC_Z		; make sure Z is cleared
+	beq	nhacp_start_session_eagain ; timed out
+	clra			; return no error.
 	rts
-98
-	jsr	nhacp_drain	; drain residual count
-99
-	clr	nhctx_session,U	; mark session dead, sets Z
-	rts
+
+nhacp_start_session_error_reply
+	; Get the error code from the reply.
+	jsr	nhacp_get_reply_byte
+	beq	nhacp_start_session_eagain ; timeout -> EAGAIN
+	tsta
+	bne	1F		; error != 0, cool cool.
+				; error == 0, map to EIO
+nhacp_start_session_eio
+	lda	#EIO
+	bra	1F
+
+nhacp_start_session_eagain
+	lda	#EAGAIN
+1	pshs	A		; save error return
+	jsr	nhacp_drain	; drain off any remaining reply
+	clr	nhctx_session,U	; mark session dead
+	leax	nhctx_timer,U	; remove the context's timer from the
+	jsr	timer_remove	; system
+	puls	A,PC		; restore error and return
 
 ;
 ; nhacp_req_send --
@@ -360,6 +395,8 @@ nhacp_end_session
 	nhacp_req_init "GOODBYE"
 	jsr	nhacp_req_send
 	clr	nhctx_session,U	; invalidate session.
+	leax	nhctx_timer,U	; remove the context's timer from the
+	jsr	timer_remove	; system
 	rts			; no reply to a GOODBYE message
 
 ;

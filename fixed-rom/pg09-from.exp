@@ -1,2 +1,2 @@
-fs_avail_end	equ	61684
-fs_avail	equ	61682
+fs_avail_end	equ	61735
+fs_avail	equ	61733
