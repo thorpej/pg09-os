@@ -132,8 +132,15 @@ nhacp_get_reply_byte
 	bmi	99F		; or, gasp, negative?
 	subd	#1		; decrement length
 	std	nhctx_reply_len,U
+	beq	1F		; if last byte, disarm timer after receiving it
 	bsr	nhacp_getc	; get the byte, handles CC_Z for us.
 	rts
+1
+	bsr	nhacp_getc	; get the last byte, handles CC_Z for us.
+	beq	1F		; :-( timed out receiving last byte
+	nhacp_timer_disarm
+	andcc	#~CC_Z		; successful receive
+1	rts
 99
 	clra			; return 0s if we're over.
 	andcc	#~CC_Z		; but don't treat this as a framing error
@@ -164,7 +171,8 @@ nhacp_getc
 
 ;
 ; nhacp_get_reply_hdr
-;	The the reply header (frame length + msg type) from the NHACP server
+;	The the reply header (frame length + msg type) from the NHACP server.
+;	This routine also arms the receive timer.
 ;
 ; Arguments --
 ;	U - NHACP context
@@ -179,6 +187,7 @@ nhacp_getc
 nhacp_get_reply_hdr
 	lda	nhctx_session,U	     ; check for dead session
 	beq	99F
+	nhacp_timer_arm
 	bsr	nhacp_getc	     ; get LSB of reply length
 	beq	98F		     ; check for timeout
 	sta	nhctx_reply_len+1,U  ; store it in big-endian order
@@ -196,6 +205,7 @@ nhacp_get_reply_hdr
 	; Timeout occurred, invalidate session.
 	jsr	nhacp_invalidate_session
 99
+	nhacp_timer_disarm
 	clr	nhctx_reply_len,U   ; zero reply length
 	clr	nhctx_reply_len+1,U ; sets Z
 	rts
