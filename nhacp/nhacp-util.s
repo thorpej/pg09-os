@@ -335,6 +335,7 @@ nhacp_req_send
 	leax	nhctx_req,U
 	clra
 	ldb	nhctx_reqlen,U
+	addb	#4		; add $8F, session ID, frame length bytes
 	jsr	nhacp_copyout
 
 	; Send data buffer.
