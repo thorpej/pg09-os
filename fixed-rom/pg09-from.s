@@ -1465,26 +1465,6 @@ cmd_oink
 	jmp	monitor_main
 
 ;
-; Helper routine for cmd_mount() and cmd_umount().
-;
-tok2drivespec
-	lda	1,X
-	cmpa	#':'		; second byte a ":"?
-	bne	99F		; nope, error
-	lda	2,X		; third byte a NUL?
-	bne	99F		; nope, error
-	lda	,X
-	cmpa	#'A'		; first byte >= "A" && < "A"+fs_maxdrives?
-	blo	99F		; nope, error
-	cmpa	#('A' + fs_maxdrives)
-	bhs	99F
-	suba	#('A' - 1)	; convert to 1-based index
-	rts
-
-99	clra
-	rts
-
-;
 ; cmd_mount
 ;	Mount a file system.
 ;
@@ -1570,15 +1550,64 @@ cmd_mount
 	jmp	monitor_main	; all done!
 
 ;
+; Helper routine for cmd_mount() and cmd_umount().
+;
+tok2drivespec
+	lda	1,X
+	cmpa	#':'		; second byte a ":"?
+	bne	99F		; nope, error
+	lda	2,X		; third byte a NUL?
+	bne	99F		; nope, error
+	lda	,X
+	cmpa	#'A'		; first byte >= "A" && < "A"+fs_maxdrives?
+	blo	99F		; nope, error
+	cmpa	#('A' + fs_maxdrives)
+	bhs	99F
+	suba	#('A' - 1)	; convert to 1-based index
+	rts
+
+99	clra
+	rts
+
+;
 ; cmd_umount
 ;	Unmount a file system.
 ;
 ;	umount a:		; unmount whatever is at A:
 ;
 cmd_umount
-	jsr	iputs
-	fcn	"umount called\r\n"
+	jsr	parsews		; require leading whitespace
+	lbeq	syntax_error	; none, syntax error
+	jsr	parsetok	; X = first argument
+	lbeq	syntax_error	; no args, syntax error
+
+	pshs	X		; save first argument on stack
+
+	tst	,Y		; Y at EOL?
+	beq	1F		; yes, good.
+	clr	,Y+		; NUL-terminate first token
+
+	tfr	Y,X		; start scanning after first token
+	jsr	parseeol	; expect EOL at this point
+	beq	9F		; nope, syntax error
+1
+	; Normalize the argument to upper case.
+	puls	X		; first argument
+	jsr	strtoupper
+	lbsr	tok2drivespec	; A = drive spec
+	tsta
+	lbeq	syntax_error	; (invalid drive spec)
+	jsr	fs_unmount	; Go unmount the darn thing!
+	tsta			; check for error
+	lbeq	monitor_main	; no error, back to main loop
+
+	jsr	error
+	BCall	"errorstr_print"
+	jsr	puts_crlf
 	jmp	monitor_main
+
+9	leas	2,S		; pop first argument off stack
+	jmp	syntax_error
 
 ;
 ; debugger
