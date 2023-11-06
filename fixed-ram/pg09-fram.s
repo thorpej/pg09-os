@@ -30,6 +30,7 @@
 
 	include "../../pg09-system/asm/pg09_defs.s"
 	include "../drivers/mc6809/mc6809_defs.s"
+	include "../sys-api/file-api.exp"
 	include "../sys-api/timer-api.exp"
 
 	org	FRAM_START
@@ -99,6 +100,19 @@ timer_list
 	if CONFIG_NHACP_W65C51
 	include "../drivers/w65c51/w65c51-nhacp-ramvars.s"
 	endif
+
+;
+; The monitor keeps an FCB and a file I/O args block for its own usage.
+;
+	export	monitor_fcb, monitor_fargs
+monitor_fcb	rmb	fcb_fcbsz
+monitor_fargs	rmb	fio_argsz
+
+;
+; The monitor keeps a 512 byte scratch buffer for its own usage.
+;
+	export	monitor_scratchbuf
+monitor_scratchbuf rmb	512
 
 ; Put the monitor's interrupt frame at the top of FRAM.  This
 ; interrupt frame has an extra 2 bytes at the top that point

@@ -579,10 +579,113 @@ file_nhacp_io_set_size
 	bra	file_nhacp_io_enotsup
 
 file_nhacp_io_list_dir
-	bra	file_nhacp_io_enotsup
+	nhacp_req_init "LIST_DIR"
+
+	ldd	fcb_nhacp_resid,Y
+	tsta				; 255 is max pattern length
+	bne	file_nhacp_io_einval
+
+	stb	nhctx_req_args+1,U	; pattern length
+
+	jsr	nhacp_req_send
+
+	; send pattern data, if any
+	ldd	fcb_nhacp_resid,Y
+	beq	1F
+	ldx	fcb_nhacp_ptr,Y
+	jsr	nhacp_copyout
+
+1	; Receive the reply.
+	jsr	nhacp_get_reply_hdr
+	beq	file_nhacp_io_eio
+
+	; Check for ERROR reply.
+	lda	nhctx_reply_type,U
+	cmpa	#NHACP_RESP_ERROR
+	lbeq	file_nhacp_io_error_reply
+
+	; Unknown error if not OK.
+	cmpa	#NHACP_RESP_OK
+	lbne	file_nhacp_io_eio
+
+	bra	file_nhacp_io_done
 
 file_nhacp_io_get_dir_entry
-	bra	file_nhacp_io_enotsup
+	nhacp_req_init "GET_DIR_ENTRY"
+
+	ldd	fcb_nhacp_resid,Y
+	tsta				; 255 max file name length
+	bne	file_nhacp_io_einval
+
+	stb	nhctx_req_args+1,U	; max file name length
+
+	;
+	; Add NHACP_FILE_ATTRS_S_sz+1 to the specified length so
+	; that we can use the residual count to track receiving
+	; the entire FILE-INFO response (which is a FILE-ATTRS
+	; followed by a STRING).
+	;
+	addd	#(NHACP_FILE_ATTRS_S_sz + 1)
+	std	fcb_nhacp_resid,Y
+
+	jsr	nhacp_req_send
+
+	; Receive the reply.
+	jsr	nhacp_get_reply_hdr
+	beq	file_nhacp_io_eio
+
+	; Check for ERROR reply.
+	lda	nhctx_reply_type,U
+	cmpa	#NHACP_RESP_ERROR
+	lbeq	file_nhacp_io_error_reply
+
+	; If OK, there are no more entries.  "actual" is already
+	; initialized to 0.
+	cmpa	#NHACP_RESP_OK
+	lbeq	file_nhacp_io_done
+
+	; Unknown error if not FILE-INFO.
+	cmpa	#NHACP_RESP_FILE_INFO
+	lbne	file_nhacp_io_eio
+
+	; Check that we got a minimum sized reply (FILE-ATTRS plus
+	; 1 byte of string length).
+	ldd	nhctx_reply_len,U
+	cmpd	#(NHACP_FILE_ATTRS_S_sz + 1)
+	blo	file_nhacp_io_eio
+
+	; Receive the FILE-ATTRS field.
+	ldy	,S		; recover FCB
+	ldx	fcb_nhacp_ptr,Y	; X = current data pointer
+	ldd	#NHACP_FILE_ATTRS_S_sz
+	pshs	D,Y		; preserve D,Y
+	jsr	nhacp_copyin	; get data from interface
+	puls	D,Y		; restore D,Y
+	beq	file_nhacp_io_eio	; handle receive timeout
+
+	lbsr	file_nhacp_io_advance
+
+	; Get the name length byte.
+	jsr	nhacp_get_reply_byte
+	beq	file_nhacp_io_eio	; handle receive timeout
+
+	; Store the name length byte in the reply buffer,
+	; advance the buffer, then use that length to read
+	; the name bytes themselves.
+	sta	[fcb_nhacp_ptr,Y]
+	tfr	A,B
+	clra				; D now has length
+	cmpd	nhctx_reply_len,U	; bigger than remaining reply length?
+	bhi	file_nhacp_io_eio	; yes -> I/O error
+
+	jsr	file_nhacp_io_advance
+
+	ldx	fcb_nhacp_ptr,Y		; D already has byte count
+	pshs	D,Y			; preserve D,Y
+	jsr	nhacp_copyin
+	puls	D,Y			; restore D,Y
+	bne	file_nhacp_io_done
+	bra	file_nhacp_io_eio
 
 ;
 ; file_nhacp_close --
