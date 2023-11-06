@@ -41,7 +41,7 @@
 	include "../sys-api/file-api.exp"
 	include "../sys-api/timer-api.exp"
 
-	include "../banked-rom0/pg09-brom0.exp"
+	include "../banked-rom1/pg09-brom1.exp"
 
 	setdp	-1	; Disable automatic direct page addressing
 
