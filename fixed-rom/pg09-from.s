@@ -505,10 +505,11 @@ brom_call
 	;
 	ldx	6,S		; X = pointer to descriptor
 	lda	,X+		; A = target bank #
-	ldu	[,X++]		; U = value in jump table slot
+	ldu	,X++		; U = address of jump table slot
 	stx	6,S		; Advance return address past descriptor
 	bsr	brom_switch	; Switch banks.
 	pshs	A		; Save previous bank.
+	ldu	,U		; U = value in jump table slot
 	pshs	U		; Push target routine address onto stack
 	;
 	; 10,S		return address (lsb)
