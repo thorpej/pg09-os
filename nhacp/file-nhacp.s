@@ -583,7 +583,7 @@ file_nhacp_io_list_dir
 
 	ldd	fcb_nhacp_resid,Y
 	tsta				; 255 is max pattern length
-	bne	file_nhacp_io_einval
+	lbne	file_nhacp_io_einval
 
 	stb	nhctx_req_args+1,U	; pattern length
 
@@ -597,7 +597,7 @@ file_nhacp_io_list_dir
 
 1	; Receive the reply.
 	jsr	nhacp_get_reply_hdr
-	beq	file_nhacp_io_eio
+	lbeq	file_nhacp_io_eio
 
 	; Check for ERROR reply.
 	lda	nhctx_reply_type,U
@@ -608,14 +608,14 @@ file_nhacp_io_list_dir
 	cmpa	#NHACP_RESP_OK
 	lbne	file_nhacp_io_eio
 
-	bra	file_nhacp_io_done
+	lbra	file_nhacp_io_done
 
 file_nhacp_io_get_dir_entry
 	nhacp_req_init "GET_DIR_ENTRY"
 
 	ldd	fcb_nhacp_resid,Y
 	tsta				; 255 max file name length
-	bne	file_nhacp_io_einval
+	lbne	file_nhacp_io_einval
 
 	stb	nhctx_req_args+1,U	; max file name length
 
@@ -632,7 +632,7 @@ file_nhacp_io_get_dir_entry
 
 	; Receive the reply.
 	jsr	nhacp_get_reply_hdr
-	beq	file_nhacp_io_eio
+	lbeq	file_nhacp_io_eio
 
 	; Check for ERROR reply.
 	lda	nhctx_reply_type,U
@@ -652,7 +652,7 @@ file_nhacp_io_get_dir_entry
 	; 1 byte of string length).
 	ldd	nhctx_reply_len,U
 	cmpd	#(NHACP_FILE_ATTRS_S_sz + 1)
-	blo	file_nhacp_io_eio
+	lblo	file_nhacp_io_eio
 
 	; Receive the FILE-ATTRS field.
 	ldy	,S		; recover FCB
@@ -661,13 +661,13 @@ file_nhacp_io_get_dir_entry
 	pshs	D,Y		; preserve D,Y
 	jsr	nhacp_copyin	; get data from interface
 	puls	D,Y		; restore D,Y
-	beq	file_nhacp_io_eio	; handle receive timeout
+	lbeq	file_nhacp_io_eio	; handle receive timeout
 
 	lbsr	file_nhacp_io_advance
 
 	; Get the name length byte.
 	jsr	nhacp_get_reply_byte
-	beq	file_nhacp_io_eio	; handle receive timeout
+	lbeq	file_nhacp_io_eio	; handle receive timeout
 
 	; Store the name length byte in the reply buffer,
 	; advance the buffer, then use that length to read
@@ -676,7 +676,7 @@ file_nhacp_io_get_dir_entry
 	tfr	A,B
 	clra				; D now has length
 	cmpd	nhctx_reply_len,U	; bigger than remaining reply length?
-	bhi	file_nhacp_io_eio	; yes -> I/O error
+	lbhi	file_nhacp_io_eio	; yes -> I/O error
 
 	jsr	file_nhacp_io_advance
 
@@ -684,8 +684,8 @@ file_nhacp_io_get_dir_entry
 	pshs	D,Y			; preserve D,Y
 	jsr	nhacp_copyin
 	puls	D,Y			; restore D,Y
-	bne	file_nhacp_io_done
-	bra	file_nhacp_io_eio
+	lbne	file_nhacp_io_done
+	lbra	file_nhacp_io_eio
 
 ;
 ; file_nhacp_close --
