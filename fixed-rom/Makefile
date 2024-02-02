@@ -19,7 +19,7 @@ sys-api:
 	sh ./gen-sysapi.sh pg09-from.sym ../sys-api/pg09-os.exp
 
 .PHONY: pg09-from.bin
-pg09-from.bin:
+pg09-from.bin: build_date.s
 	asm6809 $(CONFIGFLAGS) -l pg09-from.lst -s pg09-from.sym \
 	    -E pg09-from.exp -o $@ pg09-from.s
 	$(MAKE) sys-api

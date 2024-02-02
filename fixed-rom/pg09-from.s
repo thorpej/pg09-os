@@ -106,6 +106,28 @@ SysAddr_BankedROM_size		set	BROM_SIZE
 
 	include	"build_date.s"
 
+ram_size_512K
+	fcn	"512K"
+ram_size_1024K
+	fcn	"1024K"
+ram_size_1536K
+	fcn	"1536K"
+ram_size_2048K
+	fcn	"2048K"
+
+ram_size_strings
+	fdb	ram_size_512K
+	fdb	ram_size_1024K
+	fdb	ram_size_1536K
+	fdb	ram_size_2048K
+
+print_ram_size
+	deca				; chip count to table index
+	lsla				; table index to offset
+	ldx	#ram_size_strings	; X = ram size string table
+	ldx	A,X			; X = pointer to string
+	jmp	puts			; tail-call to puts
+
 warm_boot
 	;
 	; Disable IRQs until we can reset the timers.
@@ -187,6 +209,18 @@ call_ret
 	ldx	#MONITOR_IFRAME
 	bra	warmer_boot		; go finish warm-booting
 
+probe_ram
+	lda	#$55			; store $55 at probe location
+	sta	,X
+	lda	,X			; load it back
+	cmpa	#$55			; same?
+	bne	1F			; nope!
+	lsla				; store $AA at probe location
+	sta	,X
+	lda	,X			; load it back
+	cmpa	#$AA			; same?
+1	rts				; CC_Z is set if there is RAM here!
+
 cold_boot
 	;
 	; Initialize memory banking.
@@ -224,7 +258,8 @@ cold_boot
 	; Put the stack in LBRAM1 so we can clear FRAM.
 	;
 	; N.B. this is the first load of the stack pointer, which will
-	; unmask NMIs.
+	; unmask NMIs.  We're also assuming that at least 1 low RAM chip
+	; is installed.
 	;
 	lds	#LBRAM1_START+LBRAM1_SIZE
 
@@ -236,9 +271,42 @@ cold_boot
 	jsr	memzero16
 
 	;
-	; Now switch to the kernel stack.
+	; Now switch to the kernel stack in FRAM.
 	;
 	lds	#KSTACK_TOP
+
+	;
+	; Probe the amount of low and high banked RAM.
+	;
+	lda	#1		; assume at least one low RAM chip
+	sta	lbram_nchips
+1	lda	lbram_nchips
+	lsla			; Multiply by 16
+	lsla
+	lsla
+	lsla
+	sta	LBRAM0_BANK_REG	; switch low RAM 0 to that bank
+	ldx	#0		; probe address 0
+	bsr	probe_ram
+	bne	1F		; No RAM in this bank.
+	inc	lbram_nchips	; count the chip!
+	lda	lbram_nchips
+	cmpa	#4		; Do we have all 4?
+	beq	1F		; Yup!
+	bra	1B
+1
+	clr	LBRAM0_BANK_REG	; reset bank to 0.
+
+	lda	#1		; assume at least one high RAM chip
+	sta	hbram_nchips
+	lda	#64		; set high RAM bank to 64
+	sta	HBRAM_BANK_REG
+	ldx	#HBRAM_START	; probe HBRAM address
+	jsr	probe_ram
+	bne	1F
+	inc	hbram_nchips	; if it was there, there are 2 chips.
+1
+	clr	HBRAM_BANK_REG	; reset bank to 0.
 
 	;
 	; Enable IRQs.
@@ -258,7 +326,7 @@ cold_boot
 	jsr	iputs
 	fcc	"@thorpej's 6809 Playground OS\r\n"
 	fcc	"Version "
-	fcc	"0.5"		; Change version number here!
+	fcc	"0.6"		; Change version number here!
 	fcc	"\r\n"
 	fcn	"Built: "
 	ldx	#build_date
@@ -280,6 +348,21 @@ cold_boot
 	jsr	printdec8
 	jsr	iputs
 	fcn	"MHz\r\n"
+
+	;
+	; Report the RAM sizes.
+	;
+	jsr	iputs
+	fcn	"Low RAM: "
+	lda	lbram_nchips
+	jsr	print_ram_size
+	jsr	puts_crlf
+
+	jsr	iputs
+	fcn	"High RAM: "
+	lda	hbram_nchips
+	jsr	print_ram_size
+	jsr	puts_crlf
 
 	jmp	warm_boot		; Now go do a warm boot.
 

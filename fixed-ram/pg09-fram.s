@@ -66,6 +66,13 @@ current_iframe	rmb	2
 can_continue	rmb	1
 
 ;
+; Number of low RAM and high RAM chips.
+;
+	export	lbram_nchips,hbram_nchips
+lbram_nchips	rmb	1
+hbram_nchips	rmb	1
+
+;
 ; File system "drive" letters A-H (8 total file system mounts).
 ; Each slot is a pointer to the fsops for the mounted file system,
 ; which in turn points to the device name, file system name, and
