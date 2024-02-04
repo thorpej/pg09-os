@@ -118,7 +118,11 @@ VDP_init
 	; Clear out VRAM.
 ;	lbsr	VDP_clear
 
-	; XXX interrupts, bruh
+	; Register our interrupt handler and enable the interrupt.
+	lda	#15		; IRQ
+	ldx	#VDP_intr
+	jsr	irq_set_handler
+	jsr	irq_enable
 
 	puls	A,X,Y,PC	; restore and return
 

@@ -49,6 +49,18 @@ getline_maxcnt	equ	254	; leaves room for terminating NUL
 getline_cnt	rmb	1
 getline_buf	rmb	getline_maxcnt+1
 
+;
+; IRQ Vector Table
+;
+; This contains the addresses if 16 IRQ handlers, one for each possible IRQ
+; signal.  The interrupt controller hardware automatically loads the handler
+; from this table when the CPU performs the IRQ vector fetch.
+;
+; N.B. THIS MUST BE ALIGNED TO A 32-BYTE BOUNDARY!
+;
+	export	irq_vectab
+irq_vectab	rmb	32
+
 	export	mem_access_addr,mem_access_len
 mem_access_addr	rmb	2
 mem_access_len	rmb	2

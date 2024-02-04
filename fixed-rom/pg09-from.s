@@ -309,6 +309,44 @@ cold_boot
 	clr	HBRAM_BANK_REG	; reset bank to 0.
 
 	;
+	; Initialize the interrupt controller.
+	;
+	; -> Set up all enable ports as outputs.
+	; -> Set all enable ports to 0.
+	; -> Set the IRQ Vector Base register.
+	;
+
+	; Ensure DDR is selected by clearing each CR.
+	clr	IRQ_ENABLE_PIA+PIA_REG_CRA
+	clr	IRQ_ENABLE_PIA+PIA_REG_CRB
+
+	lda	#$FF			; All port pins are outputs
+	sta	IRQ_ENABLE_PIA+PIA_REG_DDRA
+	sta	IRQ_ENABLE_PIA+PIA_REG_DDRB
+
+	; Disable DDR access / enable peripheral interface access.
+	lda	#PIA_CRx_DDR_PI
+	sta	IRQ_ENABLE_PIA+PIA_REG_CRA
+	sta	IRQ_ENABLE_PIA+PIA_REG_CRB
+
+	; Set all IRQ enables to 0.
+	clr	IRQ_ENABLE_L_REG
+	clr	IRQ_ENABLE_H_REG
+
+	; Set the IRQ Vector Base register.
+	ldd	#irq_vectab
+	sta	IRQ_VECBASE_REG
+	stb	IRQ_VECBASE_REG+1
+
+	; Initialize all slots to the default handler.
+	lda	#16
+	ldx	#irq_vectab
+	ldy	#vec_irq
+1	sty	,X++
+	deca
+	bne	1B
+
+	;
 	; Enable IRQs.
 	;
 	andcc	#~CC_I
@@ -648,6 +686,120 @@ brom_call
 	; 0,S		slot for new CC to return
 	;
 	puls	CC,A,X,U,PC	; Restore and return.
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; Interrupt API
+	;
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;
+; irq_set_handler
+;	Set the handler for the specified IRQ.
+;
+; Arguments --
+;	A - IRQ number (0 - 15)
+;
+;	X - Handler address
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+irq_set_handler
+	pshs	A,Y		; save registers
+	cmpa	#15
+	bhi	99F		; don't to anything if bogus IRQ number
+	asla			; IRQ number to table offset
+	ldy	#irq_vectab	; Y = vector table address
+	stx	A,Y		; store handler address
+99	puls	A,Y,PC		; restore and return
+
+;
+; irq_clear_handler
+;	Clear the handler for the specified IRQ.
+;
+; Arguments --
+;	A - IRQ number (0 - 15)
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+irq_clear_handler
+	pshs	X		; save registers
+	cmpa	#15
+	bhi	99F		; don't do anything if bogus IRQ number
+	bsr	irq_disable	; make sure it's disabled first
+	ldx	#vec_irq	; default IRQ handler
+	bsr	irq_set_handler
+99	puls	X,PC		; restore and return
+
+;
+; irq_enable
+;	Enable the specified IRQ.
+; irq_disable
+;	Disable the specified IRQ.
+;
+; Arguments --
+;	A - IRQ number (0 - 15)
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+irq_enable
+	pshs	A,X,Y		; save registers
+	ldx	#irq_do_enable	; push action
+	pshs	X
+	bra	1F
+
+irq_disable
+	pshs	A,X,Y		; save registers
+	ldx	#irq_do_disable	; push action
+	pshs	X
+1
+	ldx	#irq_bittab	; X = IRQ bit table
+	cmpa	#8		; IRQ >= 8?
+	bhs	1F		; Go handle it.
+	ldy	#IRQ_ENABLE_L_REG
+	bra	2F
+1
+	cmpa	#15		; don't do anything if bogus IRQ number
+	bhi	99F
+	suba	#8		; adjust IRQ
+	ldy	#IRQ_ENABLE_H_REG
+2
+	lda	A,X		; IRQ number -> mask bit
+	jmp	[,S]		; DO EEEEET!
+
+irq_bittab
+	fcb	$01
+	fcb	$02
+	fcb	$04
+	fcb	$08
+	fcb	$10
+	fcb	$20
+	fcb	$40
+	fcb	$80
+
+irq_do_enable
+	ora	,Y		; set bit in enable register
+	bra	99F
+
+irq_do_disable
+	coma			; invert mask
+	anda	,Y		; clear bit in enable register
+99
+	sta	,Y		; update enable register
+	leas	2,S		; pop action
+	puls	A,X,Y,PC	; restore and return
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;
@@ -1734,7 +1886,7 @@ vec_firq
 	rti
 
 vec_irq
-	jmp	VDP_intr		; XXX for now, VDP_intr() does RTI
+	rti
 
 vec_swi
 	rti
