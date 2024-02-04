@@ -718,6 +718,30 @@ irq_set_handler
 99	puls	A,Y,PC		; restore and return
 
 ;
+; irq_get_handler
+;	Get the handler for the specified IRQ.
+;
+; Arguments --
+;	A - IRQ number (0 - 15)
+;
+; Returns --
+;	X - Handler address
+;
+; Clobbers --
+;	None.
+;
+irq_get_handler
+	pshs	A		; save registers
+	cmpa	#15
+	bhi	99F		; don't to anything if bogus IRQ number
+	asla			; IRQ number to table offset
+	ldx	#irq_vectab	; X = vector table address
+	ldx	A,X		; get handler address
+1	puls	A,PC		; restore and return
+99	ldx	#vec_irq
+	bra	1B
+
+;
 ; irq_clear_handler
 ;	Clear the handler for the specified IRQ.
 ;
