@@ -558,9 +558,33 @@ hbram_switch
 
 ;
 ; brom_call
-;	Call a routine in banked ROM.  Routines that are called using
-;	this trampoline have a different ABI.  A normal subroutine call
-;	has a stack that looks like this:
+;	Call a routine in banked ROM.  The ROM bank will be switched as
+;	needed and restored upon return.
+;
+; Arguments --
+;	A banked call descriptor is an immediate in the instruction
+;	stream.  This descriptor is a 3 byte datum that has the format:
+;
+;		fcc	bank_number
+;		fdb	system address of routine's jump table entry
+;
+;	The reason for mandating a jump table is to de-tangle the symbol
+;	namespace between the fixed ROM image and the banked ROM images.
+;	Banked ROM images can, as a separate step, define their outside
+;	entry points for other modules to import.
+;
+;	Other arguments are defined by the subroutine being called.
+;
+; Returns --
+;	Defined by the subroutine being called.
+;
+; Clobbers --
+;	None.
+;
+; Notes --
+;
+;	Routines that are called using this trampoline have a different ABI.
+;	A normal subroutine call has a stack that looks like this:
 ;
 ;		2,S	<maybe arguments pushed onto the stack>
 ;		1,S	return address (lsb)
@@ -592,27 +616,11 @@ hbram_switch
 ;	the stack, consider using the U register to pass that location
 ;	to the subroutine.
 ;
-; Arguments --
-;	A banked call descriptor is an immediate in the instruction
-;	stream.  This descriptor is a 3 byte datum that has the format:
-;
-;		fcc	bank_number
-;		fdb	system address of routine's jump table entry
-;
-;	The reason for mandating a jump table is to de-tangle the symbol
-;	namespace between the fixed ROM image and the banked ROM images.
-;	Banked ROM images can, as a separate step, define their outside
-;	entry points for other modules to import.
-;
-;	Other arguments defined by the subroutine being called.
-;
-; Returns --
-;	Defined by the subroutine being called.
-;
-; Clobbers --
-;	None.
-;
 brom_call
+	;
+	; 1,S		return address (lsb)
+	; 0,S		return address (msb) (actually pointer to desc)
+	;
 	pshs	CC,A,X,U	; Save A, X, and U, make a spot for CC
 	;
 	; 7,S		return address (lsb)
