@@ -691,7 +691,7 @@ brom_call
 	; 3,S		updated X (lsb)
 	; 2,S		updated X (msb)
 	; 1,S		updated A
-	; 0,S		slot for new CC to return
+	; 0,S		updated CC
 	;
 	puls	CC,A,X,U,PC	; Restore and return.
 
