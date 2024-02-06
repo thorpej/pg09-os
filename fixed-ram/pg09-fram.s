@@ -108,6 +108,10 @@ timer_list
 ;
 ; Pull in RAM variables used by various device drivers.
 ;
+	if CONFIG_CONSOLE_TL16C550
+	include "../drivers/tl16c550/tl16c550.exp"
+	include "../drivers/tl16c550/tl16c550-cons-ramvars.s"
+	endif
 	if CONFIG_NHACP
 	include "../nhacp/nhacp.exp"
 	endif
@@ -116,7 +120,10 @@ timer_list
 	include "../drivers/tms9918a/tms9918a-ramvars.s"
 	include "../drivers/tms9918a/tms9918a-tty-ramvars.s"
 	endif
-	if CONFIG_NHACP_W65C51
+	if CONFIG_NHACP_TL16C550
+	include "../drivers/tl16c550/tl16c550.exp"
+	include "../drivers/tl16c550/tl16c550-nhacp-ramvars.s"
+	elsif CONFIG_NHACP_W65C51
 	include "../drivers/w65c51/w65c51-nhacp-ramvars.s"
 	endif
 

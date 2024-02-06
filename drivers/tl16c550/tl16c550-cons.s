@@ -1,5 +1,5 @@
 ;
-; Copyright (c) 2023 Jason R. Thorpe.
+; Copyright (c) 2024 Jason R. Thorpe.
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without
@@ -25,12 +25,12 @@
 ;
 
 ;
-; Abstract console driver for the 6809 Playground.
+; TL16C550 console driver.
 ;
 
 ;
-; cons_init --
-;	Initialize the console.
+; ace_cons_init --
+;	Initialize the console ACE UART.
 ;
 ; Arguments --
 ;	None.
@@ -41,20 +41,21 @@
 ; Clobbers --
 ;	None.
 ;
-cons_init
-	if CONFIG_CONSOLE_TL16C550
-	jsr	ace_cons_init
-	elsif CONFIG_CONSOLE_W65C51
-	jsr	acia_init
-	endif
-	if CONFIG_DISPLAY_TMS9918A
-	jsr	VDP_tty_init
-	endif
-	rts
+ace_cons_init
+	pshs	A,X,Y			; save registers
+	ldx	#ace_cons_softc		; X = console softc
+	ldy	#UART0_BASE
+	sty	ace_sc_addr,X		; set UART base address
+	lda	#ACE_FCR_RXT_4
+	sta	ace_sc_fcr,X		; set prototype FCR
+	jsr	ace_init		; Do the initialization.
+	puls	A,X,Y,PC		; restore and return
 
 ;
-; cons_reinit --
-;	Re-initialize the console after a program has run.
+; ace_cons_reinit --
+;	Re-initialize the console UART.  This is intended to bring the
+;	console back on-line after a program runs and maybe screws
+;	with it.
 ;
 ; Arguments --
 ;	None.
@@ -65,20 +66,15 @@ cons_init
 ; Clobbers --
 ;	None.
 ;
-cons_reinit
-	if CONFIG_CONSOLE_TL16C550
-	jsr	ace_cons_reinit
-	elsif CONFIG_CONSOLE_W65C51
-	jsr	acia_reinit
-	endif
-	if CONFIG_DISPLAY_TMS9918A
-	jsr	VDP_tty_reinit
-	endif
-	rts
+ace_cons_reinit
+	pshs	X			; save registers
+	ldx	#ace_cons_softc		; X = console softc
+	jsr	ace_reinit		; Do it.
+	puls	X,PC			; restore and return
 
 ;
-; cons_putc --
-;	Output a character on the console.
+; ace_cons_putchar --
+;	Output a character on the console UART.
 ;
 ; Arguments --
 ;	A - character to output.
@@ -89,63 +85,50 @@ cons_reinit
 ; Clobbers --
 ;	None.
 ;
-cons_putc
-	if CONFIG_DISPLAY_TMS9918A
-	jsr	VDP_tty_putc
-	endif
-	if CONFIG_CONSOLE_TL16C550
-	jmp	ace_cons_putchar
-	elsif CONFIG_CONSOLE_W65C51
-	jmp	acia_putchar
-	else
-	rts
-	endif
+ace_cons_putchar
+	pshs	X			; save registers
+	ldx	#ace_cons_softc		; X = console softc
+	jsr	ace_putchar		; Do it.
+	puls	X,PC			; restore and return
 
 ;
-; cons_pollc --
-;	Poll for a character from the console.
+; ace_cons_pollchar --
+;	Poll for a character from the console UART.
 ;
 ; Arguments --
 ;	None.
 ;
 ; Returns --
-;       CC_Z is set if there is no character available, and clear if
-;       a character was read from the console.
+;	CC_Z is set if there is no character available, and clear if
+;	a character was read from the UART.
 ;
-;       A - Character received from the console, if available.
+;	A - Character received from the UART, if available.
 ;
 ; Clobbers --
 ;	None.
 ;
-cons_pollc
-	if CONFIG_CONSOLE_TL16C550
-	jmp	ace_cons_pollchar
-	elsif CONFIG_CONSOLE_W65C51
-	jmp	acia_pollchar
-	else
-	orcc	#CC_Z
-	rts
-	endif
+ace_cons_pollchar
+	pshs	X			; save registers
+	ldx	#ace_cons_softc		; X = console softc
+	jsr	ace_pollchar		; Do it.
+	puls	X,PC			; restore and return
 
 ;
-; cons_getc --
-;	Get an input character from the console.  Blocks until a character
-;	is available.
+; ace_cons_getchar --
+;	Get an input character from the console UART.  Blocks until a
+;	character is available.
 ;
 ; Arguments --
 ;	None.
 ;
 ; Returns --
-;	A - Character received from the console.
+;	A - Character received from the UART.
 ;
 ; Clobbers --
 ;	None.
 ;
-cons_getc
-	if CONFIG_CONSOLE_TL16C550
-	jmp	ace_cons_pollchar
-	elsif CONFIG_CONSOLE_W65C51
-	jmp	acia_getchar
-	else
-	bra	cons_getc		; not ideal.
-	endif
+ace_cons_getchar
+	pshs	X			; save registers
+	ldx	#ace_cons_softc		; X = console softc
+	jsr	ace_getchar		; Do it.
+	puls	X,PC			; restore and return
