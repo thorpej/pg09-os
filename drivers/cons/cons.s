@@ -143,7 +143,7 @@ cons_pollc
 ;
 cons_getc
 	if CONFIG_CONSOLE_TL16C550
-	jmp	ace_cons_pollchar
+	jmp	ace_cons_getchar
 	elsif CONFIG_CONSOLE_W65C51
 	jmp	acia_getchar
 	else
