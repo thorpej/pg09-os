@@ -24,10 +24,6 @@
 ; SUCH DAMAGE.
 ;
 
-	if	tl15c550_driver_included
-	else
-tl15c550_driver_included	equ	1
-
 ;
 ; Driver for the TL16C550 Asynchronous Communications Element (ACE)
 ; Operates purely in polled mode, and uses the auto-RTS-CTS feature
@@ -173,7 +169,7 @@ ace_init
 	sta	ACE_REG_FCR,Y
 
 	; Enable auto-RTS-CTS.
-	lda	#ACE_LSR_AFE+ACE_LSR_RTS
+	lda	#ACE_MCR_AFE+ACE_MCR_RTS
 	sta	ACE_REG_MCR,Y
 
 	puls	A,B,Y,PC		; restore and return
@@ -271,5 +267,3 @@ ace_getchar
 	beq	1B			; not set, loop
 	lda	ACE_REG_RBR,X		; set, return character
 	rts
-
-	endif	; tl15c550_driver_included

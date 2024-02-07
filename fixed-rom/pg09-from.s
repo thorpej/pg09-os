@@ -442,23 +442,27 @@ cold_boot
 	include "../drivers/cons/cons.s"
 	include "../drivers/cons/cons_getline.s"
 	include "../drivers/display/display.s"
-	if CONFIG_CONSOLE_TL16C550
+
+	if CONFIG_TL16C550
 	include "../drivers/tl16c550/tl16c550.exp"
-	include "../drivers/tl16c550/tl16c550-cons.s"
 	include "../drivers/tl16c550/tl16c550.s"
+	endif
+
+	if CONFIG_CONSOLE_TL16C550
+	include "../drivers/tl16c550/tl16c550-cons.s"
 	elsif CONFIG_CONSOLE_W65C51
 	include "../drivers/w65c51/w65c51.s"
 	endif
+
 	if CONFIG_DISPLAY_TMS9918A
 	include "../sys-api/tms9918a-api.exp"
 	include "../drivers/tms9918a/tms9918a-base.s"
 	include "../drivers/tms9918a/tms9918a-tty.s"
 	include "../drivers/tms9918a/tms9918a-font-spleen.s"
 	endif
+
 	if CONFIG_NHACP_TL16C550
-	include "../drivers/tl16c550/tl16c550.exp"
 	include "../drivers/tl16c550/tl16c550-nhacp.s"
-	include "../drivers/tl16c550/tl16c550.s"
 	elsif CONFIG_NHACP_W65C51
 	include "../drivers/w65c51/w65c51-nhacp.s"
 	endif

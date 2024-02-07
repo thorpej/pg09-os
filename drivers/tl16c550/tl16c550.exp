@@ -24,10 +24,6 @@
 ; SUCH DAMAGE.
 ;
 
-	if	tl15c550_exp_included
-	else
-tl15c550_exp_included	equ	1
-
 ;
 ; Exported definitions for the TL16C550 Asynchronous Communications Element
 ; (ACE) driver.
@@ -37,5 +33,3 @@ tl15c550_exp_included	equ	1
 ace_sc_addr	equ	0		; base address
 ace_sc_fcr	equ	ace_sc_addr+2	; prototype FCR
 ace_softcsz	equ	ace_sc_fcr+1
-
-	endif	; tl15c550_exp_included
