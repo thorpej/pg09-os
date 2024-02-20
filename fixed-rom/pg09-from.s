@@ -458,7 +458,8 @@ cold_boot
 	include "../sys-api/tms9918a-api.exp"
 	include "../drivers/tms9918a/tms9918a-base.s"
 	include "../drivers/tms9918a/tms9918a-tty.s"
-	include "../drivers/tms9918a/tms9918a-font-spleen.s"
+	; include "../drivers/tms9918a/tms9918a-font-spleen.s"
+	include "../drivers/tms9918a/tms9918a-font-onascii.s"
 	endif
 
 	if CONFIG_NHACP_TL16C550
