@@ -523,12 +523,19 @@ bank_switch_common0
 ;
 lbram_switch
 	pshs	B,X		; Save registers.
-	tfr	A,B		; argument into B
+	bita	#$c0		; any flag bits set?
+	bne	1F		; yes, go handle them.
+lbram_switch_both		; (expected common case is "no")
+	sta	LBRAM1_BANK_REG	 ; set LBRAM1 first
+	ldx	#LBRAM0_BANK_REG ; then go do LBRAM0
+	bra	bank_switch_common0
+
+1	tfr	A,B		; argument into B
 	anda	#LBRAM_MAXBANK	; get rid of flag bits
+	andb	#$c0		; get rid of bank number bits
 	rolb			; Get the upper 2 bits...
 	rolb			; ...of B into...
 	rolb			; ...the lower 2 bits.
-	andb	#3		; get rid of irrelavant bits
 	aslb			; index to table offset
 	ldx	#lbram_switch_jmptab
 	jmp	[B,X]		; go handle the case we're asked to handle.
@@ -545,11 +552,6 @@ lbram_switch_0
 
 lbram_switch_1
 	ldx	#LBRAM1_BANK_REG
-	bra	bank_switch_common0
-
-lbram_switch_both
-	sta	LBRAM1_BANK_REG	 ; set LBRAM1 first
-	ldx	#LBRAM0_BANK_REG ; then go do LBRAM0
 	bra	bank_switch_common0
 
 ;
