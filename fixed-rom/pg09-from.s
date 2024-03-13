@@ -104,6 +104,11 @@ SysAddr_HighBankedRAM_size	set	HBRAM_SIZE
 SysAddr_BankedROM		set	BROM_START
 SysAddr_BankedROM_size		set	BROM_SIZE
 
+	;
+	; SEE THE END OF THIS FILE for the SysData exports.
+	; That linkage table lives just below the vectors.
+	;
+
 	include	"build_date.s"
 
 ram_size_512K
@@ -856,7 +861,6 @@ irq_do_disable
 	;
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-	export	fs_avail, fs_avail_end
 fs_avail
 	if CONFIG_NHACP_TL16C550
 	fdb	ace_nhacp_fsops
@@ -1959,6 +1963,36 @@ vec_nmi
 	jmp	debugger
 
 vec_reset	equ	cold_boot
+
+
+	;
+	; System DATA linkage table.  This provides an indirect
+	; reference to exported system data.  The addresses can
+	; be fetched as so:
+	;
+	;	ldx	SysData_fs_avail
+	;
+SysData		macro
+XSysData_\1	fdb	\2
+		endm
+
+	;
+	; NOTE: THIS ORG STATEMENT MUST BE ADJUSTED EACH TIME A
+	; SysData LINKAGE IS ADDED.  EACH SysData LINKAGE IS 2
+	; BYTES.
+	;
+	org	$FFF0-(2 * 2)
+
+	;
+	; DO NOT CHANGE THE ORDER OR OF THESE STATEMENTS UNLESS YOU KNOW
+	; EXACTLY WHAT YOU ARE DOING!  THESE ARE PART OF THE OS ABI!
+	;
+	; NOTE THAT NEW SysData STATEMENTS MUST BE ADDED TO THE BEGINNING
+	; OF THE LIST (GROW AWAY FROM THE VECTOR TABLE)!
+	;
+
+	SysData "fs_avail",fs_avail
+	SysData "fs_avail_end",fs_avail_end
 
 	;
 	; VECTOR TABLE

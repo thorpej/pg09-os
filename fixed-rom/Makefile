@@ -26,9 +26,9 @@ sys-api:
 	sh ./gen-sysapi.sh pg09-from.sym ../sys-api/pg09-os.exp
 
 .PHONY: pg09-from.bin
-pg09-from.bin: build_date.s
+pg09-from.bin: build_date.s ../fixed-ram/pg09-fram.exp
 	asm6809 $(CONFIGFLAGS) -l pg09-from.lst -s pg09-from.sym \
-	    -E pg09-from.exp -o $@ pg09-from.s
+	    -o $@ pg09-from.s
 	$(MAKE) sys-api
 
 clean_fram:
