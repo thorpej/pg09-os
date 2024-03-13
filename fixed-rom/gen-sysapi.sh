@@ -39,8 +39,7 @@ _EOF
 
 SysData_list=`grep "^XSysData_" "$sym_file" | cut -f 1`
 SysSubr_list=`grep "^XSysSubr_" "$sym_file" | cut -f 1`
-SysAddr_list=`grep "^SysAddr_" "$sym_file" | cut -f 1 | grep -v _size`
-SysAddr_size_list=`grep "^SysAddr_" "$sym_file" | cut -f 1 | grep _size`
+SysAddr_list=`grep "^XSysAddr_" "$sym_file" | cut -f 1 | grep -v _size`
 
 cat << _EOF >> "$tmp_file"
 
@@ -94,9 +93,10 @@ cat << _EOF >> "$tmp_file"
 ; should be considered reserved to the operating system.
 ;
 _EOF
-(for addr_name in $SysAddr_list; do
-	addr_val=`grep "^${addr_name}\t" "$sym_file" | cut -f 3`
-	size_val=`grep "^${addr_name}_size" "$sym_file" | cut -f 3`
+(for xaddr_name in $SysAddr_list; do
+	addr_val=`grep "^${xaddr_name}\t" "$sym_file" | cut -f 3`
+	size_val=`grep "^${xaddr_name}_size" "$sym_file" | cut -f 3`
+	addr_name=`echo ${xaddr_name} | sed 's,^X,,'`
 	echo "${addr_name} equ ${addr_val}"
 	echo "${addr_name}_size equ ${size_val}"
 done) | sort >> "$tmp_file"

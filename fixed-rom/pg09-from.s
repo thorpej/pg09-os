@@ -92,17 +92,16 @@ XSysSubr_\1	fdb	\2
 	; the operating system), nor should they care about Fixed
 	; ROM (only use the exported jump table slot addresses).
 	;
-SysAddr_LowBankedRAM0		set	LBRAM0_START
-SysAddr_LowBankedRAM0_size	set	LBRAM0_SIZE
-SysAddr_LowBankedRAM1		set	LBRAM1_START
-SysAddr_LowBankedRAM1_size	set	LBRAM1_SIZE
-	; Convenience for programs that don't care abou banking.
-SysAddr_LowBankedRAM		set	LBRAM0_START
-SysAddr_LowBankedRAM_size	set	LBRAM0_SIZE+LBRAM1_SIZE
-SysAddr_HighBankedRAM		set	HBRAM_START
-SysAddr_HighBankedRAM_size	set	HBRAM_SIZE
-SysAddr_BankedROM		set	BROM_START
-SysAddr_BankedROM_size		set	BROM_SIZE
+SysAddr		macro
+XSysAddr_\1	equ	\2
+XSysAddr_\1_size equ	\3
+		endm
+
+	SysAddr	"LowBankedRAM0",LBRAM0_START,LBRAM0_SIZE
+	SysAddr	"LowBankedRAM1",LBRAM1_START,LBRAM1_SIZE
+	SysAddr	"LowBankedRAM",LBRAM0_START,LBRAM0_SIZE+LBRAM1_SIZE
+	SysAddr	"HighBankedRAM",HBRAM_START,HBRAM_SIZE
+	SysAddr	"BankedROM",BROM_START,BROM_SIZE
 
 	;
 	; SEE THE END OF THIS FILE for the SysData exports.
