@@ -56,6 +56,8 @@ SysSubr_file_io equ 57374
 SysSubr_file_open equ 57372
 SysSubr_hbram_switch equ 57352
 SysSubr_lbram_switch equ 57350
+SysSubr_timer_add equ 57378
+SysSubr_timer_remove equ 57380
 
 ;
 ; System Data linkage.  These are indirect references to data exported

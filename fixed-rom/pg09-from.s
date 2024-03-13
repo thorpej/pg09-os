@@ -83,6 +83,9 @@ XSysSubr_\1	fdb	\2
 	SysSubr "file_io",file_io
 	SysSubr "file_close",file_close
 
+	SysSubr	"timer_add",timer_add
+	SysSubr	"timer_remove",timer_remove
+
 	;
 	; System ADDRESS equates.  These are the exported names of
 	; important system addresses that programs might need to
