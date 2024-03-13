@@ -61,6 +61,3 @@
 	include "../nhacp/nhacp-macros.inc"
 	include "../nhacp/nhacp-util.s"
 	include "../nhacp/file-nhacp.s"
-
-	org	SysAddr_BankedROM+SysAddr_BankedROM_size-1
-	nop

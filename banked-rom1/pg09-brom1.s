@@ -605,6 +605,3 @@ cmd_oink
 	fcc	"( @ )\r\n"
 	fcn	"OINK!\r\n"
 	rts
-
-	org	SysAddr_BankedROM+SysAddr_BankedROM_size-1
-	nop
