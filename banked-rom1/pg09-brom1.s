@@ -25,10 +25,9 @@
 ;
 
 ;
-; ROM Bank 0 image for the 6809 Playground.
+; ROM Bank 1 image for the 6809 Playground.
 ;
 
-	include "../../pg09-system/asm/pg09_defs.s"
 	include "../drivers/mc6809/mc6809_defs.s"
 	include "../lib/ascii_defs.s"
 	include "../lib/asm_macros.inc"
@@ -40,7 +39,7 @@
 
 	setdp	-1	; Disable automatic direct page addressing
 
-	org	BROM_START
+	org	SysAddr_BankedROM
 
 ;
 ; Banked call jump table.  The order of this table defines the ABI
@@ -607,5 +606,5 @@ cmd_oink
 	fcn	"OINK!\r\n"
 	rts
 
-	org	BROM_START+BROM_SIZE-1
+	org	SysAddr_BankedROM+SysAddr_BankedROM_size-1
 	nop
