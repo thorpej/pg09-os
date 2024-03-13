@@ -34,7 +34,6 @@
 	include "../lib/asm_macros.inc"
 
 	include "../fixed-ram/pg09-fram.exp"
-	include "../fixed-rom/pg09-from.exp"
 
 	include "../sys-api/pg09-os.exp"
 	include "../sys-api/file-api.exp"
@@ -574,8 +573,8 @@ cmd_help_umount
 cmd_help_fsdevs
 	jsr	iputs
 	fcn	"Available file system devices:\r\n"
-	ldx	#fs_avail
-1	cmpx	#fs_avail_end
+	ldx	SysData_fs_avail
+1	cmpx	SysData_fs_avail_end
 	beq	99F
 
 	ldy	,X++		; get fsops pointer
