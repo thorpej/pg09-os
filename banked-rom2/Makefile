@@ -8,7 +8,7 @@ all: $(ROM_IMAGE)
 	cd ../fixed-ram && $(MAKE)
 
 .PHONY: $(ROM_IMAGE)
-$(ROM_IMAGE):
+$(ROM_IMAGE): ../fixed-ram/pg09-fram.exp
 	asm6809 -l pg09-brom$(ROM_BANK).lst \
 	    -s pg09-brom$(ROM_BANK).sym -o $@ pg09-brom$(ROM_BANK).s
 	sh ../lib/gen-bcalls.sh $(ROM_BANK) \
