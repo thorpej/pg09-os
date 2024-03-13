@@ -38,7 +38,7 @@ cat << _EOF > "$tmp_file"
 _EOF
 
 SysData_list=`grep "^XSysData_" "$sym_file" | cut -f 1`
-SysSubr_list=`grep "^SysSubr_[5|6]" "$sym_file" | cut -f 1 | cut -d _ -f 2`
+SysSubr_list=`grep "^XSysSubr_" "$sym_file" | cut -f 1`
 SysAddr_list=`grep "^SysAddr_" "$sym_file" | cut -f 1 | grep -v _size`
 SysAddr_size_list=`grep "^SysAddr_" "$sym_file" | cut -f 1 | grep _size`
 
@@ -58,26 +58,11 @@ ${api_file_ub}_included	equ	1
 ;	jsr	[SysSubr_whatever]
 ;
 _EOF
-(for subr_targ in $SysSubr_list; do
-	subr_name=`grep "${subr_targ}$" "$sym_file" | cut -f 1`
-	subr_val=`grep "^SysSubr_${subr_targ}" "$sym_file" | cut -f 3`
-	#
-	# Handle some SysSubr symbol renames:
-	#
-	#	warm_boot -> exit
-	#
-	case x"$subr_name" in
-	xwarm_boot)	subr_name=exit		;;
-	esac
+(for xsubr_name in $SysSubr_list; do
+	subr_val=`grep "^${xsubr_name}\t" "$sym_file" | cut -f 3`
+	subr_name=`echo ${xsubr_name} | sed 's,^X,,'`
 	if [ x"$subr_name" != x ]; then
-		awk -v subr_targ=$subr_targ -v subr_name=$subr_name -v \
-		    subr_val=$subr_val \
-			'{
-				if ($1 == "SysSubr_" subr_targ) {
-					printf("SysSubr_%s equ %s\n",
-					    subr_name, subr_val)
-				}
-			 }' "$sym_file"
+		echo "$subr_name equ $subr_val"
 	fi
 done) | sort >> "$tmp_file"
 

@@ -52,7 +52,7 @@
 	;	jsr	[SysSubr_cons_getc]
 	;
 SysSubr		macro
-SysSubr_\1	fdb	\1
+XSysSubr_\1	fdb	\2
 		endm
 
 	;
@@ -61,27 +61,27 @@ SysSubr_\1	fdb	\1
 	;
 	org	FROM_START
 
-	SysSubr warm_boot	; gen-sysapi.sh fixes this up to SysSubr_exit
+	SysSubr "exit",warm_boot
 
-	SysSubr	brom_call
-	SysSubr brom_switch
-	SysSubr	lbram_switch
-	SysSubr	hbram_switch
+	SysSubr	"brom_call",brom_call
+	SysSubr "brom_switch",brom_switch
+	SysSubr	"lbram_switch",lbram_switch
+	SysSubr	"hbram_switch",hbram_switch
 
-	SysSubr	cons_getc
-	SysSubr cons_pollc
-	SysSubr cons_putc
-	SysSubr cons_getline
+	SysSubr	"cons_getc",cons_getc
+	SysSubr "cons_pollc",cons_pollc
+	SysSubr "cons_putc",cons_putc
+	SysSubr "cons_getline",cons_getline
 
-	SysSubr display_get_count
-	SysSubr display_get_default
-	SysSubr display_get_descriptor
-	SysSubr display_acquire
-	SysSubr display_release
+	SysSubr "display_get_count",display_get_count
+	SysSubr "display_get_default",display_get_default
+	SysSubr "display_get_descriptor",display_get_descriptor
+	SysSubr "display_acquire",display_acquire
+	SysSubr "display_release",display_release
 
-	SysSubr file_open
-	SysSubr file_io
-	SysSubr file_close
+	SysSubr "file_open",file_open
+	SysSubr "file_io",file_io
+	SysSubr "file_close",file_close
 
 	;
 	; System ADDRESS equates.  These are the exported names of
