@@ -1,2 +1,0 @@
-fs_avail_end	equ	62318
-fs_avail	equ	62316
