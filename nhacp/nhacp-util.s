@@ -254,7 +254,7 @@ nhacp_start_session_common
 	leax	nhctx_timer,U
 	clr	tmr_callout,X		; no callout, we just check for
 	clr	tmr_callout+1,X		; expiration
-	jsr	timer_add
+	jsr	[SysSubr_timer_add]
 
 	; Send request.
 	leax	nhctx_req,U
@@ -300,8 +300,8 @@ nhacp_start_session_eagain
 1	pshs	A		; save error return
 	jsr	nhacp_drain	; drain off any remaining reply
 	clr	nhctx_session,U	; mark session dead
-	leax	nhctx_timer,U	; remove the context's timer from the
-	jsr	timer_remove	; system
+	leax	nhctx_timer,U	; remove the context's timer from the system
+	jsr	[SysSubr_timer_remove]
 	puls	A,PC		; restore error and return
 
 ;
@@ -396,8 +396,8 @@ nhacp_end_session
 	nhacp_req_init "GOODBYE"
 	jsr	nhacp_req_send
 	clr	nhctx_session,U	; invalidate session.
-	leax	nhctx_timer,U	; remove the context's timer from the
-	jsr	timer_remove	; system
+	leax	nhctx_timer,U	; remove the context's timer from the system
+	jsr	[SysSubr_timer_remove]
 	rts			; no reply to a GOODBYE message
 
 ;

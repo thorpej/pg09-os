@@ -42,6 +42,7 @@
 	include "../sys-api/timer-api.exp"
 
 	include "../banked-rom1/pg09-brom1.exp"
+	include "../banked-rom2/pg09-brom2.exp"
 
 	setdp	-1	; Disable automatic direct page addressing
 
@@ -436,11 +437,8 @@ cold_boot
 	include "../lib/udiv16.s"
 
 	if CONFIG_NHACP
+	; NHACP lives in banked ROM
 	include "../nhacp/nhacp.exp"
-	include "../nhacp/nhacp-proto.inc"
-	include "../nhacp/nhacp-macros.inc"
-	include "../nhacp/nhacp-util.s"
-	include "../nhacp/file-nhacp.s"
 	endif
 
 	;

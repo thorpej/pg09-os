@@ -6,6 +6,7 @@ all: $(ROM_IMAGE)
 pg09-rom.bin:
 	cat ../fixed-rom/pg09-from.bin \
 	    ../banked-rom1/pg09-brom1.bin \
+	    ../banked-rom2/pg09-brom2.bin \
 	    > pg09-rom.bin
 
 clean:

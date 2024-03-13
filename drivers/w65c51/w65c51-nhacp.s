@@ -187,7 +187,7 @@ dacia_fs_mount
 
 	; Start a system session with the server.
 	; A contains the error code upon return.
-	jsr	nhacp_start_system_session
+	BCall	"nhacp_start_system_session"
 
 99	puls	B,X,Y,U,PC
 
@@ -207,7 +207,7 @@ dacia_fs_mount
 dacia_fs_unmount
 	pshs	A,B,X,Y,U
 	ldu	#dacia_nhacp_context
-	jsr	nhacp_end_session
+	BCall	"nhacp_end_session"
 	lda	#ACIA_CMD_IRDQ		; disable IRQ -> de-assert /RTS
 	sta	DACIA_REG_CMD
 	puls	A,B,X,Y,U,PC
@@ -228,7 +228,7 @@ dacia_fs_unmount
 dacia_file_open
 	pshs	U
 	ldu	#dacia_nhacp_context
-	jsr	file_nhacp_open
+	BCall	"file_nhacp_open"
 	puls	U,PC
 
 ;
@@ -247,7 +247,7 @@ dacia_file_open
 dacia_file_io
 	pshs	U
 	ldu	#dacia_nhacp_context
-	jsr	file_nhacp_io
+	BCall	"file_nhacp_io"
 	puls	U,PC
 
 ;
@@ -266,7 +266,7 @@ dacia_file_io
 dacia_file_close
 	pshs	U
 	ldu	#dacia_nhacp_context
-	jsr	file_nhacp_close
+	BCall	"file_nhacp_close"
 	puls	U,PC
 
 dacia_fileops
@@ -277,9 +277,12 @@ dacia_fileops
 dacia_devname
 	fcn	"UART1"
 
+dacia_fsname
+	fcn	"NHACP"
+
 dacia_fsops
 	fdb	dacia_devname
-	fdb	nhacp_fsname
+	fdb	dacia_fsname
 	fdb	dacia_fileops
 	fdb	dacia_fs_mount
 	fdb	dacia_fs_unmount

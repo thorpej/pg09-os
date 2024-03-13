@@ -120,7 +120,7 @@ ace_nhacp_fs_mount
 
 	; Start a system session with the server.
 	; A contains the error code upon return.
-	jsr	nhacp_start_system_session
+	BCall	"nhacp_start_system_session"
 
 	puls	B,X,Y,U,PC		; restore and return
 
@@ -140,7 +140,7 @@ ace_nhacp_fs_mount
 ace_nhacp_fs_unmount
 	pshs	A,B,X,Y,U
 	ldu	#ace_nhacp_context
-	jsr	nhacp_end_session
+	BCall	"nhacp_end_session"
 	clr	UART1_BASE+ACE_REG_MCR	; de-assert RTS
 	puls	A,B,X,Y,U,PC		; restore and return
 
@@ -160,7 +160,7 @@ ace_nhacp_fs_unmount
 ace_nhacp_file_open
 	pshs	U			; save registers
 	ldu	#ace_nhacp_context
-	jsr	file_nhacp_open
+	BCall	"file_nhacp_open"
 	puls	U,PC			; restore and return
 
 ;
@@ -179,7 +179,7 @@ ace_nhacp_file_open
 ace_nhacp_file_io
 	pshs	U			; save registers
 	ldu	#ace_nhacp_context
-	jsr	file_nhacp_io
+	BCall	"file_nhacp_io"
 	puls	U,PC			; restore and return
 
 ;
@@ -198,7 +198,7 @@ ace_nhacp_file_io
 ace_nhacp_file_close
 	pshs	U			; save registers
 	ldu	#ace_nhacp_context
-	jsr	file_nhacp_close
+	BCall	"file_nhacp_close"
 	puls	U,PC			; restore and return
 
 ace_nhacp_fileops
@@ -209,9 +209,12 @@ ace_nhacp_fileops
 ace_nhacp_devname
 	fcn	"UART1"
 
+ace_nhacp_fsname
+	fcn	"NHACP"
+
 ace_nhacp_fsops
 	fdb	ace_nhacp_devname
-	fdb	nhacp_fsname
+	fdb	ace_nhacp_fsname
 	fdb	ace_nhacp_fileops
 	fdb	ace_nhacp_fs_mount
 	fdb	ace_nhacp_fs_unmount
