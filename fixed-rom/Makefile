@@ -29,7 +29,7 @@ sys-api: pg09-from-abi-head.s pg09-from-abi-tail.s pg09-from-abi.s
 	sh ./gen-sysapi.sh pg09-from.sym ../sys-api/pg09-os.exp
 
 .PHONY: pg09-from.bin
-pg09-from.bin: sys-api
+pg09-from.bin: build_date.s sys-api
 	asm6809 $(CONFIGFLAGS) -l pg09-from.lst -o $@ pg09-from.s
 
 clean_fram:
