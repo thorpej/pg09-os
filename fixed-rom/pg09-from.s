@@ -974,10 +974,33 @@ fs_mount
 	; If no drive is currently selected, then select this one we
 	; just mounted.
 	lda	fs_curdrive
-	bne	1F
+	bne	98F
 	lda	,S		; Get drive specifier
 	sta	fs_curdrive
-1	clr	,S		; return 0 (no error) in A
+
+	; Since we just selected this as the current drive, change the
+	; current working directory to "/" on that drive.
+	lda	#'/'
+	sta	,-S		; S now points to the string "/"
+	lda	#1		; A = length of string (1)
+	tfr	S,X		; X = "/"
+	jsr	fs_chdir	; Go do it.
+	leas	1,S		; pop the 1 byte path.
+	tsta			; Did an error occur?
+	beq	98F		; nope, we are all set.
+	tfr	A,B		; save error code
+
+	lda	#'@'
+	adda	fs_curdrive
+	jsr	[SysSubr_cons_putc]
+	jsr	iputs
+	fcn	":/ - "
+	tfr	B,A		; recover error code
+	BCall	"errorstr_print"
+	jsr	puts_crlf
+	clr	fs_curdrive	; clear the current drive on error.
+
+98	clr	,S		; return 0 (no error) in A
 99	puls	A,B,X,Y,PC	; restore and return
 
 fs_mount_error
@@ -1051,6 +1074,65 @@ fs_unmount_esrch
 	bra	fs_unmount_error
 
 ;
+; fs_chdir
+;	Change the current working directory.
+;
+; Arguments --
+;	A - length of path string.
+;	X - pointer to path string.
+;
+; Returns --
+;	A - error code
+;
+; Clobbers --
+;	None.
+;
+fs_chdir
+	pshs	B,X,Y
+	;
+	; 4,S
+	; 3,S	saved Y
+	; 2,S
+	; 1,S	saved X
+	; 0,S	saved B
+	;
+	; XXX No drive letter processing yet.
+	;
+	ldx	#monitor_fargs
+	sta	fopen_namelen,X	; stash the name length, D now free
+	ldy	#monitor_fcb	; Y = FCB
+	sty	fopen_fcb,X	; FCB always at offset 0
+
+	; Initialize the open arguments.
+	ldd	1,S		; pointer to path
+	std	fopen_name,X
+	ldd	#O_RDONLY+O_DIRECTORY
+	std	fopen_flags,X
+
+	; Open the directory.
+	jsr	[SysSubr_file_open]
+	lda	fcb_error,Y
+	bne	99F		; get out now if error occurred.
+
+	; Now that the new CWD is open, close the existing one.
+	; X still points to the arguments buffer.
+	ldy	#cwd_fcb
+	sty	fclose_fcb,X
+	jsr	[SysSubr_file_close]
+
+	; Now copy monitor FCB to the CWD FCB, and zap the monitor FCB.
+	ldx	#cwd_fcb
+	ldy	#monitor_fcb
+	lda	#fcb_fcbsz
+	jsr	memcpy8
+	ldx	#monitor_fcb
+	jsr	memzero8
+
+	clra			; success!
+
+99	puls	B,X,Y,PC	; restore and return
+
+;
 ; file_open
 ;	Open a file.
 ;
@@ -1068,6 +1150,13 @@ file_open
 	; XXX No drive letter processing yet.
 	;
 	pshs	Y
+
+	; Make sure this FCB isn't busy already. Since the file ops
+	; pointer is the first field in the FCB, we can just use
+	; indirect addressing, rather than issuing 2 load instructions.
+	ldy	[fopen_fcb,X]
+	bne	file_open_ebusy
+
 	if CONFIG_NHACP_TL16C550
 	ldy	#ace_nhacp_fileops
 	elsif CONFIG_NHACP_W65C51
@@ -1075,9 +1164,15 @@ file_open
 	else
 	XXX ERROR ERROR ERROR XXX
 	endif
+
 	sty	[fopen_fcb,X]	; store fileops pointer in FCB
 	jsr	[fov_open,Y]
 	puls	Y,PC
+
+file_open_ebusy
+	pshs	A
+	lda	#EBUSY
+	bra	file_io_error
 
 ;
 ; file_io
@@ -1099,8 +1194,18 @@ file_io
 	; is the first field in the FCB, we can just use indirect
 	; addressing, rather than issuing 2 load instructions.
 	ldy	[fio_fcb,X]
+	beq	file_io_ebadf	; NULL fov -> EBADF
 	jsr	[fov_io,Y]
 	puls	Y,PC
+
+file_io_ebadf
+	pshs	A
+	lda	#EBADF
+
+file_io_error
+	ldy	fio_fcb,X
+	sta	fcb_error,Y
+	puls	A,Y,PC
 
 ;
 ; file_close
@@ -1122,7 +1227,11 @@ file_close
 	; is the first field in the FCB, we can just use indirect
 	; addressing, rather than issuing 2 load instructions.
 	ldy	[fclose_fcb,X]
+	beq	file_io_ebadf	; NULL fov -> EBADF
 	jsr	[fov_close,Y]
+	; File is now closed, clear the file ops vector.
+	ldy	#0
+	sty	[fclose_fcb,X]
 	puls	Y,PC
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

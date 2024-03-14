@@ -137,6 +137,12 @@ monitor_fcb	rmb	fcb_fcbsz
 monitor_fargs	rmb	fio_argsz
 
 ;
+; This FCB represents the current working directory.
+;
+	export	cwd_fcb
+cwd_fcb		rmb	fcb_fcbsz
+
+;
 ; The monitor keeps a 512 byte scratch buffer for its own usage.
 ;
 	export	monitor_scratchbuf
