@@ -54,6 +54,7 @@ fcb_nhacp_actual	equ	(fcb_nhacp_offset + 4)	; 2 bytes
 ;
 ; Arguments --
 ;	X - pointer to file open arguments
+;	U - pointer to NHACP context
 ;
 ; Returns --
 ;	Error status in File Control Block.
@@ -74,7 +75,6 @@ file_nhacp_open
 	; 0,S	A
 	;
 	ldy	fopen_fcb,X	; Y = FCB
-	ldu	fcb_nhacp_ctx,Y	; U = NHACP context
 
 	nhacp_req_init "STORAGE_OPEN"
 
@@ -96,6 +96,18 @@ file_nhacp_open
 	std	nhctx_data,U
 
 	pshs	Y		; save FCB pointer
+	;
+	; 9,S
+	; 8,S	U
+	; 7,S
+	; 6,S	Y
+	; 5,S
+	; 4,S	X		; saved args pointer
+	; 3,S	B
+	; 2,S	A
+	; 1,S
+	; 0,S			; saved FCB pointer
+	;
 
 	jsr	nhacp_req_send
 
@@ -201,6 +213,7 @@ file_nhacp_io_advance_offset
 ;
 ; Arguments --
 ;	X - pointer to file I/O arguments
+;	U - pointer to NHACP context
 ;
 ; Returns --
 ;	Error status in File Control Block.
@@ -221,7 +234,6 @@ file_nhacp_io
 	; 0,S	A
 	;
 	ldy	fio_fcb,X	; Y = FCB
-	ldu	fcb_nhacp_ctx,Y	; U = NHACP context
 
 	;
 	; Before we dispatch to the real I/O routine, stash
@@ -410,7 +422,7 @@ file_nhacp_io_error
 	beq	99F		; kill session if framing error
 98	puls	A,B,X,Y,U,PC	; restore and return
 
-99	lbeq	nhacp_invalidate_session ; kill session
+99	jsr	nhacp_invalidate_session ; kill session
 	tst	fcb_error,Y		 ; error already set?
 	bne	98B			 ; yes, just get out.
 	lda	#EIO			 ; default to EIO
@@ -693,6 +705,7 @@ file_nhacp_io_get_dir_entry
 ;
 ; Arguments --
 ;	X - pointer to file close arguments
+;	U - pointer to NHACP context
 ;
 ; Returns --
 ;	None.
@@ -713,7 +726,6 @@ file_nhacp_close
 	; 0,S	A
 	;
 	ldy	fclose_fcb,X	; Y = FCB
-	ldu	fcb_nhacp_ctx,Y	; U = NHACP context
 
 	nhacp_req_init "FILE_CLOSE"
 
