@@ -13,8 +13,7 @@ CONFIGFLAGS+=	-d CONFIG_NHACP=1
 
 all: $(ROM_IMAGE)
 
-exports:
-	@true
+exports: sys-api
 
 .PHONY: ../fixed-ram/pg09-fram.exp
 ../fixed-ram/pg09-fram.exp:
@@ -24,15 +23,14 @@ exports:
 build_date.s:
 	echo "build_date fcn \"`date`\"" > build_date.s
 
-.PHONY: sys-api
-sys-api:
+sys-api: pg09-from-abi-head.s pg09-from-abi-tail.s pg09-from-abi.s
+	asm6809 -d __GENERATE_EXPORTS=1 \
+	    -s pg09-from.sym pg09-from-abi.s
 	sh ./gen-sysapi.sh pg09-from.sym ../sys-api/pg09-os.exp
 
 .PHONY: pg09-from.bin
-pg09-from.bin: build_date.s ../fixed-ram/pg09-fram.exp
-	asm6809 $(CONFIGFLAGS) -l pg09-from.lst -s pg09-from.sym \
-	    -o $@ pg09-from.s
-	$(MAKE) sys-api
+pg09-from.bin: sys-api
+	asm6809 $(CONFIGFLAGS) -l pg09-from.lst -o $@ pg09-from.s
 
 clean_fram:
 	cd ../fixed-ram && $(MAKE) clean

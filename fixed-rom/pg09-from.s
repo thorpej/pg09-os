@@ -44,73 +44,11 @@
 	include "../banked-rom1/pg09-brom1.exp"
 	include "../banked-rom2/pg09-brom2.exp"
 
+	include	"pg09-from-abi-head.s"	; sets origin
+
 	setdp	-1	; Disable automatic direct page addressing
 
-	;
-	; System SUBROUTINE jump table.  These are called like normal
-	; subroutines, not with SWI as with a system call, i.e.:
-	;
-	;	jsr	[SysSubr_cons_getc]
-	;
-SysSubr		macro
-XSysSubr_\1	fdb	\2
-		endm
-
-	;
-	; DO NOT CHANGE THE ORDER OR THE ORIGIN OF THESE STATEMENTS UNLESS
-	; YOU KNOW EXACTLY WHAT YOU ARE DOING!  THESE ARE PART OF THE OS ABI!
-	;
-	org	FROM_START
-
-	SysSubr "exit",warm_boot
-
-	SysSubr	"brom_call",brom_call
-	SysSubr "brom_switch",brom_switch
-	SysSubr	"lbram_switch",lbram_switch
-	SysSubr	"hbram_switch",hbram_switch
-
-	SysSubr	"cons_getc",cons_getc
-	SysSubr "cons_pollc",cons_pollc
-	SysSubr "cons_putc",cons_putc
-	SysSubr "cons_getline",cons_getline
-
-	SysSubr "display_get_count",display_get_count
-	SysSubr "display_get_default",display_get_default
-	SysSubr "display_get_descriptor",display_get_descriptor
-	SysSubr "display_acquire",display_acquire
-	SysSubr "display_release",display_release
-
-	SysSubr "file_open",file_open
-	SysSubr "file_io",file_io
-	SysSubr "file_close",file_close
-
-	SysSubr	"timer_add",timer_add
-	SysSubr	"timer_remove",timer_remove
-
-	;
-	; System ADDRESS equates.  These are the exported names of
-	; important system addresses that programs might need to
-	; care about.
-	;
-	; Programs should not care about Fixed RAM (reserved for
-	; the operating system), nor should they care about Fixed
-	; ROM (only use the exported jump table slot addresses).
-	;
-SysAddr		macro
-XSysAddr_\1	equ	\2
-XSysAddr_\1_size equ	\3
-		endm
-
-	SysAddr	"LowBankedRAM0",LBRAM0_START,LBRAM0_SIZE
-	SysAddr	"LowBankedRAM1",LBRAM1_START,LBRAM1_SIZE
-	SysAddr	"LowBankedRAM",LBRAM0_START,LBRAM0_SIZE+LBRAM1_SIZE
-	SysAddr	"HighBankedRAM",HBRAM_START,HBRAM_SIZE
-	SysAddr	"BankedROM",BROM_START,BROM_SIZE
-
-	;
-	; SEE THE END OF THIS FILE for the SysData exports.
-	; That linkage table lives just below the vectors.
-	;
+	CODE
 
 	include	"build_date.s"
 
@@ -136,6 +74,7 @@ print_ram_size
 	ldx	A,X			; X = pointer to string
 	jmp	puts			; tail-call to puts
 
+exit					; exported name
 warm_boot
 	;
 	; Disable IRQs until we can reset the timers.
@@ -1964,35 +1903,7 @@ vec_nmi
 
 vec_reset	equ	cold_boot
 
-
-	;
-	; System DATA linkage table.  This provides an indirect
-	; reference to exported system data.  The addresses can
-	; be fetched as so:
-	;
-	;	ldx	SysData_fs_avail
-	;
-SysData		macro
-XSysData_\1	fdb	\2
-		endm
-
-	;
-	; NOTE: THIS ORG STATEMENT MUST BE ADJUSTED EACH TIME A
-	; SysData LINKAGE IS ADDED.  EACH SysData LINKAGE IS 2
-	; BYTES.
-	;
-	org	$FFF0-(2 * 2)
-
-	;
-	; DO NOT CHANGE THE ORDER OR OF THESE STATEMENTS UNLESS YOU KNOW
-	; EXACTLY WHAT YOU ARE DOING!  THESE ARE PART OF THE OS ABI!
-	;
-	; NOTE THAT NEW SysData STATEMENTS MUST BE ADDED TO THE BEGINNING
-	; OF THE LIST (GROW AWAY FROM THE VECTOR TABLE)!
-	;
-
-	SysData "fs_avail",fs_avail
-	SysData "fs_avail_end",fs_avail_end
+	include	"pg09-from-abi-tail.s"
 
 	;
 	; VECTOR TABLE

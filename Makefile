@@ -1,6 +1,6 @@
 SUBDIRS=	fixed-ram \
-		banked-rom1 banked-rom2 \
 		fixed-rom \
+		banked-rom1 banked-rom2 \
 		rom-image
 
 all: exports
