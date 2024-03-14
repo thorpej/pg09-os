@@ -38,7 +38,7 @@ cat << _EOF > "$tmp_file"
 ;
 _EOF
 
-BCall_list=`grep "^BCall_[45]" "$sym_file" | cut -f 1 | cut -d _ -f 2`
+BCall_list=`grep "^XBCall_" "$sym_file" | cut -f 1`
 
 cat << _EOF >> "$tmp_file"
 
@@ -47,21 +47,11 @@ cat << _EOF >> "$tmp_file"
 ${bcall_file_ub}_included	equ	1
 
 _EOF
-(for bcall_targ in $BCall_list; do
-	bcall_name=`grep "${bcall_targ}$" "$sym_file" | cut -f 1`
-	bcall_val=`grep "^BCall_${bcall_targ}" "$sym_file" | cut -f 3`
-	if [ x"$bcall_name" != x ]; then
-		awk -v bcall_targ=$bcall_targ -v bcall_name=$bcall_name \
-		    -v bcall_val=$bcall_val -v bankno=$bankno \
-			'{
-				if ($1 == "BCall_" bcall_targ) {
-					printf("BCall_%s_slot equ %s\n",
-					    bcall_name, bcall_val)
-					printf("BCall_%s_bank equ %s\n",
-					    bcall_name, bankno)
-				}
-			 }' "$sym_file"
-	fi
+(for xbcall_name in $BCall_list; do
+	bcall_val=`grep "^${xbcall_name}" "$sym_file" | cut -f 3`
+	bcall_name=`echo ${xbcall_name} | sed 's,^X,,'`
+	echo "${bcall_name}_bank equ $bankno"
+	echo "${bcall_name}_slot equ $bcall_val"
 done) | sort >> "$tmp_file"
 
 cat << _EOF >> "$tmp_file"

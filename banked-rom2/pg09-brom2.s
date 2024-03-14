@@ -43,12 +43,12 @@
 ; Banked call jump table.  The order of this table defines the ABI
 ; of the module in this ROM bank.
 ;
-	BCall_decl nhacp_start_system_session
-	BCall_decl nhacp_end_session
+	BCall_decl "nhacp_start_system_session",nhacp_start_system_session
+	BCall_decl "nhacp_end_session",nhacp_end_session
 
-	BCall_decl file_nhacp_open
-	BCall_decl file_nhacp_io
-	BCall_decl file_nhacp_close
+	BCall_decl "file_nhacp_open",file_nhacp_open
+	BCall_decl "file_nhacp_io",file_nhacp_io
+	BCall_decl "file_nhacp_close",file_nhacp_close
 
 ;
 ; Code goes here.

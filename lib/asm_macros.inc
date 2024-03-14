@@ -38,7 +38,7 @@
 ; Banked ROM address range and grow towards the middle.
 ;
 BCall_decl	macro
-BCall_\1	fdb     \1
+XBCall_\1	fdb     \2
 		endm
 
 ;
