@@ -24,6 +24,10 @@
 ; SUCH DAMAGE.
 ;
 
+	if	lib_asm_macros_included
+	else
+lib_asm_macros_included	equ	1
+
 ;
 ; General assembly macros
 ;
@@ -37,9 +41,20 @@
 ; that BCall_decl entries start at the beginning or end of the
 ; Banked ROM address range and grow towards the middle.
 ;
+	if	__GENERATE_EXPORTS
+
+BCall_decl	macro
+XBCall_\1	fdb     \2
+\1
+		endm
+
+	else
+
 BCall_decl	macro
 XBCall_\1	fdb     \2
 		endm
+
+	endif
 
 ;
 ; Invoke a Banked ROM Call.
@@ -77,3 +92,5 @@ M_clrd		macro
 		endm
 
 	endif	; CONFIG_6309
+
+	endif	; lib_asm_macros_included
