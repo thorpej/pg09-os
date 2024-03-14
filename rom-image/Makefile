@@ -6,6 +6,9 @@ ROM_SEGMENTS=	../fixed-rom/pg09-from.bin \
 
 all: $(ROM_IMAGE)
 
+exports:
+	@true
+
 .PHONY: pg09-rom.bin
 pg09-rom.bin:
 	@rm -f $@;						\

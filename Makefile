@@ -1,13 +1,22 @@
-SUBDIRS=	banked-rom1 banked-rom2 \
+SUBDIRS=	fixed-ram \
+		banked-rom1 banked-rom2 \
 		fixed-rom \
 		rom-image
 
-all:
+all: exports
 	@for dir in $(SUBDIRS); do			\
+		echo "===> ALL in $$dir";		\
 		(cd $$dir && $(MAKE) all);		\
+	done
+
+exports:
+	@for dir in $(SUBDIRS); do			\
+		echo "===> EXPORTS in $$dir";		\
+		(cd $$dir && $(MAKE) exports);		\
 	done
 
 clean:
 	@for dir in $(SUBDIRS); do			\
+		echo "===> CLEAN in $$dir";		\
 		(cd $$dir && $(MAKE) clean);		\
 	done

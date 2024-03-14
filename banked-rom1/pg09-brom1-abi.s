@@ -1,5 +1,5 @@
 ;
-; Copyright (c) 2024 Jason R. Thorpe.
+; Copyright (c) 2023 Jason R. Thorpe.
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without
@@ -24,27 +24,17 @@
 ; SUCH DAMAGE.
 ;
 
-;
-; ROM Bank 2 image for the 6809 Playground.
-;
-
-	include "../drivers/mc6809/mc6809_defs.s"
 	include "../lib/asm_macros.inc"
-
 	include "../sys-api/pg09-os.exp"
-	include "../sys-api/file-api.exp"
-	include "../sys-api/timer-api.exp"
 
-	include	"pg09-brom2-abi.s"	; sets origin
+	org	SysAddr_BankedROM
 
-	setdp	-1	; Disable automatic direct page addressing
-
-	CODE
-
-	include "../lib/memcpy8.s"
-
-	include "../nhacp/nhacp.exp"
-	include "../nhacp/nhacp-proto.inc"
-	include "../nhacp/nhacp-macros.inc"
-	include "../nhacp/nhacp-util.s"
-	include "../nhacp/file-nhacp.s"
+;
+; Banked call jump table.  The order of this table defines the ABI
+; of the module in this ROM bank.
+;
+	BCall_decl "cmd_reg",cmd_reg
+	BCall_decl "cmd_loads",cmd_loads
+	BCall_decl "cmd_help",cmd_help
+	BCall_decl "cmd_oink",cmd_oink
+	BCall_decl "errorstr_print",errorstr_print

@@ -24,27 +24,18 @@
 ; SUCH DAMAGE.
 ;
 
-;
-; ROM Bank 2 image for the 6809 Playground.
-;
-
-	include "../drivers/mc6809/mc6809_defs.s"
 	include "../lib/asm_macros.inc"
-
 	include "../sys-api/pg09-os.exp"
-	include "../sys-api/file-api.exp"
-	include "../sys-api/timer-api.exp"
 
-	include	"pg09-brom2-abi.s"	; sets origin
+	org	SysAddr_BankedROM
 
-	setdp	-1	; Disable automatic direct page addressing
+;
+; Banked call jump table.  The order of this table defines the ABI
+; of the module in this ROM bank.
+;
+	BCall_decl "nhacp_start_system_session",nhacp_start_system_session
+	BCall_decl "nhacp_end_session",nhacp_end_session
 
-	CODE
-
-	include "../lib/memcpy8.s"
-
-	include "../nhacp/nhacp.exp"
-	include "../nhacp/nhacp-proto.inc"
-	include "../nhacp/nhacp-macros.inc"
-	include "../nhacp/nhacp-util.s"
-	include "../nhacp/file-nhacp.s"
+	BCall_decl "file_nhacp_open",file_nhacp_open
+	BCall_decl "file_nhacp_io",file_nhacp_io
+	BCall_decl "file_nhacp_close",file_nhacp_close

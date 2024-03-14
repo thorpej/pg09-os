@@ -13,6 +13,9 @@ CONFIGFLAGS+=	-d CONFIG_NHACP=1
 
 all: $(ROM_IMAGE)
 
+exports:
+	@true
+
 .PHONY: ../fixed-ram/pg09-fram.exp
 ../fixed-ram/pg09-fram.exp:
 	cd ../fixed-ram && $(MAKE)
