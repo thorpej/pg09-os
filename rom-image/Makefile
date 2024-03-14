@@ -13,6 +13,10 @@ exports:
 pg09-rom.bin:
 	@rm -f $@;						\
 	for segment in $(ROM_SEGMENTS); do			\
+		if [ ! -f $$segment ]; then			\
+			echo "Segment $$segment is missing.";	\
+			exit 1;					\
+		fi;						\
 		size=$$(stat -L -f %z "$$segment");		\
 		if [ $$size -gt 8192 ]; then			\
 			echo "Segment $$segment is too large.";	\
