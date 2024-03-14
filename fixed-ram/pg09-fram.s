@@ -112,13 +112,15 @@ timer_list
 	include "../drivers/tl16c550/tl16c550.exp"
 	include "../drivers/tl16c550/tl16c550-cons-ramvars.s"
 	endif
-	if CONFIG_NHACP
-	include "../nhacp/nhacp.exp"
-	endif
+
 	include "../drivers/display/display-ramvars.s"
 	if CONFIG_DISPLAY_TMS9918A
 	include "../drivers/tms9918a/tms9918a-ramvars.s"
 	include "../drivers/tms9918a/tms9918a-tty-ramvars.s"
+	endif
+
+	if CONFIG_NHACP
+	include "../nhacp/nhacp.exp"
 	endif
 	if CONFIG_NHACP_TL16C550
 	include "../drivers/tl16c550/tl16c550.exp"
