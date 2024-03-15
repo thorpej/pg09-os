@@ -247,8 +247,15 @@ file_nhacp_io
 	std	fcb_nhacp_offset,Y
 	ldd	fio_offset+2,X
 	std	fcb_nhacp_offset+2,Y
-	clr	fcb_nhacp_actual,Y
-	clr	fcb_nhacp_actual+1,Y
+
+	;
+	; Clear the "actual" counts in both the args structure
+	; (for return to the caller) and the running count in
+	; the FCB.
+	;
+	M_clrd
+	std	fio_actual,X
+	std	fcb_nhacp_actual,Y
 
 	pshs	Y		; stash FCB on stack
 	;
@@ -278,7 +285,7 @@ file_nhacp_io
 
 	; Jump to the handler.
 	ldx	#file_nhacp_io_jmptab
-	jsr	[A,X]
+	jmp	[A,X]
 
 file_nhacp_io_einval
 	lda	#EINVAL
@@ -410,13 +417,18 @@ file_nhacp_io_error_reply
 					; error == 0, map to EIO
 file_nhacp_io_eio
 	lda	#EIO
-	bra	file_nhacp_io_error
+
+file_nhacp_io_error
+	puls	Y			; get saved FCB pointer
+	bra	97F
 
 file_nhacp_io_done
-	clra			; error = 0
-file_nhacp_io_error
-	; A = error code
-	puls	Y		; get saved FCB pointer
+	ldx	4,S			; recover args
+	puls	Y			; get saved FCB pointer
+	ldd	fcb_nhacp_actual,Y	; get actual count
+	std	fio_actual,X		; record it for the caller
+	clra				; error = 0
+97	; A = error code
 	sta	fcb_error,Y
 	jsr	nhacp_drain	; drain off the rest of the reply
 	beq	99F		; kill session if framing error
@@ -626,19 +638,14 @@ file_nhacp_io_get_dir_entry
 	nhacp_req_init "GET_DIR_ENTRY"
 
 	ldd	fcb_nhacp_resid,Y
-	tsta				; 255 max file name length
-	lbne	file_nhacp_io_einval
-
-	stb	nhctx_req_args+1,U	; max file name length
-
-	;
-	; Add NHACP_FILE_ATTRS_S_sz+1 to the specified length so
-	; that we can use the residual count to track receiving
-	; the entire FILE-INFO response (which is a FILE-ATTRS
-	; followed by a STRING).
-	;
-	addd	#(NHACP_FILE_ATTRS_S_sz + 1)
-	std	fcb_nhacp_resid,Y
+	cmpd	#NHACP_FILE_ATTRS_S_sz+1
+	lblt	file_nhacp_io_einval	; need room for attrs + name length
+					; at least
+	subd	#NHACP_FILE_ATTRS_S_sz+1
+	cmpd	#255			; max file name length
+	bls	1F
+	ldb	#255			; just saturate
+1	stb	nhctx_req_args+1,U	; max file name length
 
 	jsr	nhacp_req_send
 
@@ -681,23 +688,26 @@ file_nhacp_io_get_dir_entry
 	jsr	nhacp_get_reply_byte
 	lbeq	file_nhacp_io_eio	; handle receive timeout
 
-	; Store the name length byte in the reply buffer,
-	; advance the buffer, then use that length to read
-	; the name bytes themselves.
-	sta	[fcb_nhacp_ptr,Y]
-	tfr	A,B
-	clra				; D now has length
+	; Stash the name length on the stack temporarily.  We need
+	; to write it to the caller's buffer and then advance the
+	; pointer to be ready for the name.  But to do that, we need
+	; to shuffle some registers around.
+	pshs	A
+	sta	[fcb_nhacp_ptr,Y]	; save name length in buffer
+	ldd	#1			; D=1 (also A=0, B=1)
+	jsr	file_nhacp_io_advance	; advance buffer 1 byte
+	puls	B			; Now D has name length
+
 	cmpd	nhctx_reply_len,U	; bigger than remaining reply length?
 	lbhi	file_nhacp_io_eio	; yes -> I/O error
 
-	jsr	file_nhacp_io_advance
-
 	ldx	fcb_nhacp_ptr,Y		; D already has byte count
 	pshs	D,Y			; preserve D,Y
-	jsr	nhacp_copyin
-	puls	D,Y			; restore D,Y
-	lbne	file_nhacp_io_done
-	lbra	file_nhacp_io_eio
+	jsr	nhacp_copyin		; get name
+	puls	D,Y			; restore D,Y (CC is preserved)
+	lbeq	file_nhacp_io_eio	; EIO if timed out
+	jsr	file_nhacp_io_advance	; advance buffer by name length
+	lbra	file_nhacp_io_done
 
 ;
 ; file_nhacp_close --
