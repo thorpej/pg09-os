@@ -1053,11 +1053,15 @@ fs_unmount
 	clr	,X+
 
 	; If we just unmounted the current drive, clear the current
-	; drive.
+	; drive and invalidate the cwd_fcb.
 	lda	fs_curdrive
 	cmpa	,S
 	bne	1F
 	clr	fs_curdrive
+	lda	#fcb_fcbsz
+	ldx	#cwd_fcb
+	jsr	memzero8
+
 1	clr	,S		; return 0 (no error) in A
 99	puls	A,X,Y,PC	; restore and return
 
