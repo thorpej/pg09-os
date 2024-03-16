@@ -35,8 +35,7 @@
 ;	interface getc/putc [via NHACP context]
 ;
 
-fcb_nhacp_ctx		equ	(fcb_opaque + 0)	; 2 bytes
-fcb_nhacp_fd		equ	(fcb_nhacp_ctx + 2)	; 1 byte
+fcb_nhacp_fd		equ	(fcb_opaque + 0)	; 1 byte
 
 ;
 ; NHACP specifies a max payload of 8192 bytes, so we may need to loop
