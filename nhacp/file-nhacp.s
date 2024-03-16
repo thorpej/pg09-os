@@ -29,7 +29,7 @@
 ; looks like this:
 ;
 ;	kernel file I/O calls ->
-;	interface file I/O calls [stashes NHACP context in FCB] ->
+;	interface file I/O calls [passes NHACP context] ->
 ;	NHACP file I/O calls ->
 ;	NHACP utility routines ->
 ;	interface getc/putc [via NHACP context]
@@ -63,10 +63,8 @@ fcb_nhacp_actual	equ	(fcb_nhacp_offset + 4)	; 2 bytes
 ;	None.
 ;
 file_nhacp_open
-	pshs	A,B,X,Y,U	; save registers
+	pshs	A,B,X,Y		; save registers
 	;
-	; 7,S
-	; 6,S	U
 	; 5,S
 	; 4,S	Y
 	; 3,S
@@ -97,8 +95,6 @@ file_nhacp_open
 
 	pshs	Y		; save FCB pointer
 	;
-	; 9,S
-	; 8,S	U
 	; 7,S
 	; 6,S	Y
 	; 5,S
@@ -131,7 +127,7 @@ file_nhacp_open
 	ldy	,S		; get saved FCB pointer (but don't pop)
 	inca			; we save it as fdesc+1
 	sta	fcb_nhacp_fd,Y	; save fdesc in FCB
-	lbra	file_nhacp_io_done
+	lbra	file_nhacp_open_done
 
 file_nhacp_io_jmptab
 	fdb	file_nhacp_io_read
@@ -222,10 +218,8 @@ file_nhacp_io_advance_offset
 ;	None.
 ;
 file_nhacp_io
-	pshs	A,B,X,Y,U	; save registers
+	pshs	A,B,X,Y		; save registers
 	;
-	; 7,S
-	; 6,S	U
 	; 5,S
 	; 4,S	Y
 	; 3,S
@@ -259,8 +253,6 @@ file_nhacp_io
 
 	pshs	Y		; stash FCB on stack
 	;
-	; 9,S
-	; 8,S	U
 	; 7,S
 	; 6,S	Y
 	; 5,S
@@ -422,17 +414,21 @@ file_nhacp_io_error
 	puls	Y			; get saved FCB pointer
 	bra	97F
 
+file_nhacp_open_done
+	puls	Y			; get saved FCB pointer
+	bra	96F
+
 file_nhacp_io_done
 	ldx	4,S			; recover args
 	puls	Y			; get saved FCB pointer
 	ldd	fcb_nhacp_actual,Y	; get actual count
 	std	fio_actual,X		; record it for the caller
-	clra				; error = 0
+96	clra				; error = 0
 97	; A = error code
 	sta	fcb_error,Y
 	jsr	nhacp_drain	; drain off the rest of the reply
 	beq	99F		; kill session if framing error
-98	puls	A,B,X,Y,U,PC	; restore and return
+98	puls	A,B,X,Y,PC	; restore and return
 
 99	jsr	nhacp_invalidate_session ; kill session
 	tst	fcb_error,Y		 ; error already set?
@@ -724,10 +720,8 @@ file_nhacp_io_get_dir_entry
 ;	None.
 ;
 file_nhacp_close
-	pshs	A,B,X,Y,U	; save registers
+	pshs	A,B,X,Y		; save registers
 	;
-	; 7,S
-	; 6,S	U
 	; 5,S
 	; 4,S	Y
 	; 3,S
@@ -749,4 +743,4 @@ file_nhacp_close
 	jsr	nhacp_req_send
 
 	; No reply to FILE-CLOSE.
-99	puls	A,B,X,Y,U,PC	; restore and return
+99	puls	A,B,X,Y,PC	; restore and return
