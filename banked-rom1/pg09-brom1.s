@@ -430,6 +430,7 @@ monitor_helptab
 	fcc	"MOUN",'T'+$80		; mount a file system
 	fcc	"UMOUN",'T'+$80		; unmount a file system
 	fcc	"FSDEV",'S'+$80		; file system devices
+	fcc	"L",'S'+$80		; list a directory
 	fcc	0
 
 monitor_helpjmptab
@@ -445,6 +446,7 @@ monitor_helpjmptab
 	fdb	cmd_help_mount
 	fdb	cmd_help_umount
 	fdb	cmd_help_fsdevs
+	fdb	cmd_help_ls
 	fdb	cmd_help_generic
 
 cmd_help_generic
@@ -459,6 +461,7 @@ cmd_help_generic
 	fcc	"OFF    - power off the system\r\n"
 	fcc	"MOUNT  - mount a file system\r\n"
 	fcc	"UMOUNT - unmount a file system\r\n"
+	fcc	"LS     - list a directory\r\n"
 	fcc	"?      - help\r\n"
 	fcn	"Use '? <cmd>' for additional help.\r\n"
 	rts
@@ -585,6 +588,13 @@ cmd_help_fsdevs
 	bra	1B
 99	rts
 
+cmd_help_ls
+	jsr	iputs
+	fcc	"LS - list the current directory\r\n"
+	fcc	"Example:\r\n"
+	fcn	"  LS\r\n"
+	rts
+
 ;
 ; cmd_oink
 ;	The dumbest little easter egg.
@@ -636,35 +646,47 @@ ls_loop
 	ldx	fio_data,X	; get poiner to data buffer
 
 	; print the returned FILE-INFO (file attrs + string)
-	lda	#' '
-	jsr	[SysSubr_cons_putc]
+	clr	,-S				; push NUL terminator
+	lda	#' '				; push a ' ' character
+	pshs	A
+	lda	#'-'
+	pshs	A				; push 3 '-' characters
+	pshs	A
+	pshs	A
+	lda	#' '				; push a ' ' character
+	pshs	A
+
+	; " --- " 6 bytes
 
 	ldb	NHACP_FILE_ATTRS_S_FLAGS,X	; lsb, little endian
 
-	lda	#'-'
 	bitb	#NHACP_FILE_ATTRS_F_SPEC
 	beq	1F
 	lda	#'S'
+	sta	1,S				; 
 	bra	2F
-1	bitb	#NHACP_FILE_ATTRS_F_DIR
+1
+	bitb	#NHACP_FILE_ATTRS_F_DIR
 	beq	2F
 	lda	#'D'
-2	jsr	[SysSubr_cons_putc]
-
-	lda	#'-'
+	sta	1,S
+2
 	bitb	#NHACP_FILE_ATTRS_F_RD
 	beq	1F
 	lda	#'R'
-1	jsr	[SysSubr_cons_putc]
-
-	lda	#'-'
+	sta	2,S
+1
 	bitb	NHACP_FILE_ATTRS_F_WR
 	beq	1F
 	lda	#'W'
-1	jsr	[SysSubr_cons_putc]
-
-	lda	#' '
-	jsr	[SysSubr_cons_putc]
+	sta	3,S
+1
+	; Now print the string.
+	pshs	X
+	leax	2,S				; point at the string
+	jsr	puts
+	puls	X
+	leas	6,S				; pop temp string
 
 	leax	NHACP_FILE_ATTRS_S_sz,X		; advance past attrs
 	lda	,X+				; A = name length, X = name
