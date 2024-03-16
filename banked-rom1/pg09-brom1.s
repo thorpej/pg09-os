@@ -37,6 +37,8 @@
 	include "../sys-api/pg09-os.exp"
 	include "../sys-api/file-api.exp"
 
+	include "../nhacp/nhacp-proto.inc"	; groan
+
 	include	"pg09-brom1-abi.s"	; sets origin
 
 	setdp	-1	; Disable automatic direct page addressing
@@ -593,3 +595,88 @@ cmd_oink
 	fcc	"( @ )\r\n"
 	fcn	"OINK!\r\n"
 	rts
+
+;
+; cmd_ls
+;	List a directory
+;
+;	ls
+;
+cmd_ls
+	jsr	parseeol	; expect EOL at this point
+	lbeq	9F		; nope, syntax error
+
+	ldx	#monitor_fargs
+	ldy	#cwd_fcb
+	sty	fio_fcb,X
+	lda	#FIO_OP_LIST_DIR
+	sta	fio_op,X
+	M_clrd			; No pattern
+	std	fio_length,X
+	jsr	[SysSubr_file_io]
+	lda	fcb_error,Y
+	lbne	8F
+
+ls_loop
+	ldx	#monitor_fargs
+	; fio_fcb already valid from above
+	lda	#FIO_OP_GET_DIR_ENTRY
+	sta	fio_op,X
+	ldd	#monitor_scratchbuf
+	std	fio_data,X
+	ldd	#512
+	std	fio_length,X
+	jsr	[SysSubr_file_io]
+	lda	fcb_error,Y
+	lbne	7F
+
+	ldd	fio_actual,X
+	beq	8F		; 0 data returned, all done.
+
+	ldx	fio_data,X	; get poiner to data buffer
+
+	; print the returned FILE-INFO (file attrs + string)
+	lda	#' '
+	jsr	[SysSubr_cons_putc]
+
+	ldb	NHACP_FILE_ATTRS_S_FLAGS,X	; lsb, little endian
+
+	lda	#'-'
+	bitb	#NHACP_FILE_ATTRS_F_SPEC
+	beq	1F
+	lda	#'S'
+	bra	2F
+1	bitb	#NHACP_FILE_ATTRS_F_DIR
+	beq	2F
+	lda	#'D'
+2	jsr	[SysSubr_cons_putc]
+
+	lda	#'-'
+	bitb	#NHACP_FILE_ATTRS_F_RD
+	beq	1F
+	lda	#'R'
+1	jsr	[SysSubr_cons_putc]
+
+	lda	#'-'
+	bitb	NHACP_FILE_ATTRS_F_WR
+	beq	1F
+	lda	#'W'
+1	jsr	[SysSubr_cons_putc]
+
+	lda	#' '
+	jsr	[SysSubr_cons_putc]
+
+	leax	NHACP_FILE_ATTRS_S_sz,X		; advance past attrs
+	lda	,X+				; A = name length, X = name
+	clr	A,X				; NUL-terminate name
+	jsr	puts				; print it
+	jsr	puts_crlf
+	lbra	ls_loop				; go back around
+
+7	jsr	error
+	jsr	errorstr_print
+	jsr	puts_crlf
+
+8	rts
+
+9	jmp	syntax_error

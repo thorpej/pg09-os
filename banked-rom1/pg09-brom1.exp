@@ -31,14 +31,16 @@
 pg09_brom1_exp_included	equ	1
 
 BCall_cmd_help_bank equ 1
-BCall_cmd_help_slot equ 49156
+BCall_cmd_help_slot equ 49158
 BCall_cmd_loads_bank equ 1
-BCall_cmd_loads_slot equ 49154
+BCall_cmd_loads_slot equ 49156
+BCall_cmd_ls_bank equ 1
+BCall_cmd_ls_slot equ 49162
 BCall_cmd_oink_bank equ 1
-BCall_cmd_oink_slot equ 49158
+BCall_cmd_oink_slot equ 49160
 BCall_cmd_reg_bank equ 1
-BCall_cmd_reg_slot equ 49152
+BCall_cmd_reg_slot equ 49154
 BCall_errorstr_print_bank equ 1
-BCall_errorstr_print_slot equ 49160
+BCall_errorstr_print_slot equ 49152
 
 	endif	; pg09_brom1_exp_included

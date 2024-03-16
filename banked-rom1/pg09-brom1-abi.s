@@ -33,8 +33,9 @@
 ; Banked call jump table.  The order of this table defines the ABI
 ; of the module in this ROM bank.
 ;
+	BCall_decl "errorstr_print",errorstr_print
 	BCall_decl "cmd_reg",cmd_reg
 	BCall_decl "cmd_loads",cmd_loads
 	BCall_decl "cmd_help",cmd_help
 	BCall_decl "cmd_oink",cmd_oink
-	BCall_decl "errorstr_print",errorstr_print
+	BCall_decl "cmd_ls",cmd_ls

@@ -42,6 +42,10 @@
 	CODE
 
 	include "../lib/memcpy8.s"
+	include "../lib/puts.s"
+	include "../lib/printdec.s"
+	include "../lib/printhex.s"
+	include "../lib/udiv16.s"
 
 	include "../nhacp/nhacp.exp"
 	include "../nhacp/nhacp-proto.inc"
