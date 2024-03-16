@@ -35,11 +35,15 @@ BCall_cmd_help_slot equ 49158
 BCall_cmd_loads_bank equ 1
 BCall_cmd_loads_slot equ 49156
 BCall_cmd_ls_bank equ 1
-BCall_cmd_ls_slot equ 49162
+BCall_cmd_ls_slot equ 49166
+BCall_cmd_mount_bank equ 1
+BCall_cmd_mount_slot equ 49162
 BCall_cmd_oink_bank equ 1
 BCall_cmd_oink_slot equ 49160
 BCall_cmd_reg_bank equ 1
 BCall_cmd_reg_slot equ 49154
+BCall_cmd_umount_bank equ 1
+BCall_cmd_umount_slot equ 49164
 BCall_errorstr_print_bank equ 1
 BCall_errorstr_print_slot equ 49152
 

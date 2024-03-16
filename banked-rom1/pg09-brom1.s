@@ -47,12 +47,14 @@
 
 	include "../lib/memzero8.s"
 	include "../lib/parseeol.s"
-	include "../lib/parsehex.s"
 	include "../lib/parsews.s"
+	include "../lib/parsetok.s"
+	include "../lib/parsehex.s"
 	include "../lib/parsetbl.s"
 	include "../lib/printdec.s"
 	include "../lib/printhex.s"
 	include	"../lib/puts.s"
+	include "../lib/strtoupper.s"
 	include "../lib/toupper.s"
 	include "../lib/udiv16.s"
 
@@ -605,6 +607,151 @@ cmd_oink
 	fcc	"( @ )\r\n"
 	fcn	"OINK!\r\n"
 	rts
+
+;
+; cmd_mount
+;	Mount a file system.
+;
+;	mount uart a:		; mount UART1 at A:
+;	mount			; display mounted file systems
+;
+cmd_mount
+	jsr	parsews		; require leading whitespace
+	lbeq	10F
+	jsr	parsetok	; X = first argument
+	lbeq	10F		; no args, print the mounts.
+
+	tst	,Y		; Y at EOL?
+	lbeq	syntax_error	; yes, syntax error
+	clr	,Y+		; NUL-terminate first token
+	pshs	X		; save first argument on stack
+
+	tfr	Y,X		; start scanning after first token
+	jsr	parsetok	; X = second argument
+	lbeq	9F		; no second argument, syntax error
+
+	tst	,Y		; Y at EOL?
+	bne	1F		; Nope, to finish up the line.
+	pshs	X		; save second argument on stack
+	bra	2F
+
+1	clr	,Y+		; NUL-terminte second token
+	pshs	X		; save second argument on stack
+
+	tfr	Y,X		; start scanning after second token
+	jsr	parseeol	; expect EOL at this point
+	beq	8F		; nope, syntax error
+
+2
+	; Normalize the 2 arguments to upper case.
+	ldx	2,S		; first argument
+	jsr	strtoupper
+	puls	X		; second argument
+	jsr	strtoupper
+	bsr	tok2drivespec	; A = drive spec
+	tsta
+	lbeq	9F		; (invalid drive spec)
+	puls	X		; first argument back into X
+	jsr	[SysSubr_fs_mount] ; Go mount the darn thing!
+	tsta			; check for error
+	beq	99F		; no error, back to main loop
+
+	jsr	error
+	jsr	errorstr_print
+	jsr	puts_crlf
+	bra	99F
+
+8	leas	2,S		; pop second argument off stack
+	leas	2,S		; pop first argument off stack
+	jmp	syntax_error
+
+10	; If we get here, no arguments were given and we need to print
+	; out the current set of mounts.
+	tst	,X		; make sure we're at EOL
+	lbne	syntax_error	; nope, syntax error
+	ldx	#fs_drives
+	clra			; start drive spec at 0 here.
+
+1	ldy	,X++		; Get the fsops
+	beq	2F		; nothing here, look at the next slot
+	pshs	A,X		; save our place
+	adda	#'A'		; drive spec to drive letter
+	jsr	[SysSubr_cons_putc]
+	jsr	iputs
+	fcn	": "
+	ldx	fsov_devname,Y	; device name from fsops
+	jsr	puts
+	jsr	iputs
+	fcn	" ("
+	ldx	fsov_fsname,Y	; file system type name from fsops
+	jsr	puts
+	jsr	iputs
+	fcn	")\r\n"
+	puls	A,X		; recover our brain
+2	inca
+	cmpa	#fs_maxdrives
+	bne	1B		; more work to do.
+99	rts			; all done!
+
+;
+; Helper routine for cmd_mount() and cmd_umount().
+;
+tok2drivespec
+	lda	1,X
+	cmpa	#':'		; second byte a ":"?
+	bne	99F		; nope, error
+	lda	2,X		; third byte a NUL?
+	bne	99F		; nope, error
+	lda	,X
+	cmpa	#'A'		; first byte >= "A" && < "A"+fs_maxdrives?
+	blo	99F		; nope, error
+	cmpa	#('A' + fs_maxdrives)
+	bhs	99F
+	suba	#('A' - 1)	; convert to 1-based index
+	rts
+
+99	clra
+	rts
+
+;
+; cmd_umount
+;	Unmount a file system.
+;
+;	umount a:		; unmount whatever is at A:
+;
+cmd_umount
+	jsr	parsews		; require leading whitespace
+	lbeq	syntax_error	; none, syntax error
+	jsr	parsetok	; X = first argument
+	lbeq	syntax_error	; no args, syntax error
+
+	pshs	X		; save first argument on stack
+
+	tst	,Y		; Y at EOL?
+	beq	1F		; yes, good.
+	clr	,Y+		; NUL-terminate first token
+
+	tfr	Y,X		; start scanning after first token
+	jsr	parseeol	; expect EOL at this point
+	beq	9F		; nope, syntax error
+1
+	; Normalize the argument to upper case.
+	puls	X		; first argument
+	jsr	strtoupper
+	lbsr	tok2drivespec	; A = drive spec
+	tsta
+	lbeq	syntax_error	; (invalid drive spec)
+	jsr	[SysSubr_fs_unmount] ; Go unmount the darn thing!
+	tsta			; check for error
+	lbeq	8F		; no error, back to main loop
+
+	jsr	error
+	jsr	errorstr_print
+	jsr	puts_crlf
+8	rts
+
+9	leas	2,S		; pop first argument off stack
+	jmp	syntax_error
 
 ;
 ; cmd_ls

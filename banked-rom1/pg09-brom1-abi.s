@@ -38,4 +38,6 @@
 	BCall_decl "cmd_loads",cmd_loads
 	BCall_decl "cmd_help",cmd_help
 	BCall_decl "cmd_oink",cmd_oink
+	BCall_decl "cmd_mount",cmd_mount
+	BCall_decl "cmd_umount",cmd_umount
 	BCall_decl "cmd_ls",cmd_ls

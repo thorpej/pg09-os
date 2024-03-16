@@ -79,6 +79,10 @@ XSysSubr_\1	fdb	\2
 	SysSubr "timer_add",timer_add
 	SysSubr "timer_remove",timer_remove
 
+	SysSubr "fs_mount",fs_mount
+	SysSubr "fs_unmount",fs_unmount
+	SysSubr "fs_chdir",fs_chdir
+
 	;
 	; System ADDRESS equates.  These are the exported names of
 	; important system addresses that programs might need to
