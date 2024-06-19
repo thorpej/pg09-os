@@ -43,7 +43,7 @@
 ;	None.
 ;
 parseeol
-	bsr	parsews		; skip the whitespace.
+	lbsr	parsews		; skip the whitespace.
 	tst	,X		; *X == NUL?
 	bne	1F		; If not, return error;
 	andcc	#~CC_Z		; clear Z to return true.

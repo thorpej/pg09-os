@@ -41,7 +41,7 @@ strtoupper
 	pshs	A,X		; Save registers
 1	lda	,X		; A = *X
 	beq	99F		; NUL -> all done
-	bsr	toupper		; A = toupper(A)
+	lbsr	toupper		; A = toupper(A)
 	sta	,X+		; update string, advance pointer
 	bra	1B
 99	puls	A,X,PC		; restore and return

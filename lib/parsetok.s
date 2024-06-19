@@ -48,7 +48,7 @@
 ;	None.
 ;
 parsetok
-	bsr	parsews		; skip any whitespace (updates X)
+	lbsr	parsews		; skip any whitespace (updates X)
 	tst	,X		; *X == NUL?
 	beq	99F		; yes, get out.
 
