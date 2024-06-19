@@ -185,7 +185,7 @@ s19_get_nybble
 ;
 s19_getc
 	jsr	[s19ctx_getc,U]
-	jsr	toupper
+	lbsr	toupper
 
 	cmpa	#0		; NUL?
 	beq	2F		; abort.
