@@ -46,7 +46,7 @@
 ;
 parsehex8
 	pshs	B		; Save B
-	jsr	parsehex16	; Parse the number
+	bsr	parsehex16	; Parse the number
 	beq	1F		; get out now if parsehex16() returne false
 	bvs	1F		; ...or if it overflowed (A = $FF already)
 	tsta			; Conveniently clears CC_V.
