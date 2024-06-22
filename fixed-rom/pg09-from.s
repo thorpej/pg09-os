@@ -39,6 +39,7 @@
 	include "../sys-api/pg09-os.exp"
 	include "../sys-api/display-api.exp"
 	include "../sys-api/file-api.exp"
+	include "../sys-api/i2c-api.exp"
 	include "../sys-api/timer-api.exp"
 
 	include "../banked-rom1/pg09-brom1.exp"
@@ -311,7 +312,7 @@ cold_boot
 	jsr	iputs
 	fcc	"@thorpej's 6809 Playground OS\r\n"
 	fcc	"Version "
-	fcc	"0.6"		; Change version number here!
+	fcc	"0.7"		; Change version number here!
 	fcc	"\r\n"
 	fcn	"Built: "
 	ldx	#build_date
@@ -386,6 +387,7 @@ cold_boot
 	include "../drivers/cons/cons.s"
 	include "../drivers/cons/cons_getline.s"
 	include "../drivers/display/display.s"
+	include "../drivers/i2c/i2c.s"
 
 	if CONFIG_TL16C550
 	include "../drivers/tl16c550/tl16c550.exp"
@@ -410,6 +412,10 @@ cold_boot
 	include "../drivers/tl16c550/tl16c550-nhacp.s"
 	elsif CONFIG_NHACP_W65C51
 	include "../drivers/w65c51/w65c51-nhacp.s"
+	endif
+
+	if CONFIG_I2C_PCF8584
+	include "../drivers/pcf8584/pcf8584.s"
 	endif
 
 ;

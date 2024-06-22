@@ -58,6 +58,7 @@ SysSubr_fs_chdir equ 57386
 SysSubr_fs_mount equ 57382
 SysSubr_fs_unmount equ 57384
 SysSubr_hbram_switch equ 57352
+SysSubr_i2c_exec equ 57388
 SysSubr_lbram_switch equ 57350
 SysSubr_timer_add equ 57378
 SysSubr_timer_remove equ 57380

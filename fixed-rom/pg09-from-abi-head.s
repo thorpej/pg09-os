@@ -83,6 +83,8 @@ XSysSubr_\1	fdb	\2
 	SysSubr "fs_unmount",fs_unmount
 	SysSubr "fs_chdir",fs_chdir
 
+	SysSubr "i2c_exec",i2c_exec
+
 	;
 	; System ADDRESS equates.  These are the exported names of
 	; important system addresses that programs might need to
