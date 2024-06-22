@@ -31,6 +31,10 @@
 	;
 	;	ldx	SysData_fs_avail
 	;
+	; ...and the data at that address as so:
+	;
+	;	ldx	[SysData_fs_avail]
+	;
 	if	__GENERATE_EXPORTS
 
 SysData		macro
