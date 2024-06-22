@@ -31,14 +31,20 @@
 pg09_brom2_exp_included	equ	1
 
 BCall_file_nhacp_close_bank equ 2
-BCall_file_nhacp_close_slot equ 49160
+BCall_file_nhacp_close_slot equ 49166
 BCall_file_nhacp_io_bank equ 2
-BCall_file_nhacp_io_slot equ 49158
+BCall_file_nhacp_io_slot equ 49164
 BCall_file_nhacp_open_bank equ 2
-BCall_file_nhacp_open_slot equ 49156
+BCall_file_nhacp_open_slot equ 49162
+BCall_fs_chdir_bank equ 2
+BCall_fs_chdir_slot equ 49156
+BCall_fs_mount_bank equ 2
+BCall_fs_mount_slot equ 49152
+BCall_fs_unmount_bank equ 2
+BCall_fs_unmount_slot equ 49154
 BCall_nhacp_end_session_bank equ 2
-BCall_nhacp_end_session_slot equ 49154
+BCall_nhacp_end_session_slot equ 49160
 BCall_nhacp_start_system_session_bank equ 2
-BCall_nhacp_start_system_session_slot equ 49152
+BCall_nhacp_start_system_session_slot equ 49158
 
 	endif	; pg09_brom2_exp_included

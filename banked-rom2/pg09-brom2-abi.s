@@ -33,6 +33,10 @@
 ; Banked call jump table.  The order of this table defines the ABI
 ; of the module in this ROM bank.
 ;
+	BCall_decl "fs_mount",fs_mount
+	BCall_decl "fs_unmount",fs_unmount
+	BCall_decl "fs_chdir",fs_chdir
+
 	BCall_decl "nhacp_start_system_session",nhacp_start_system_session
 	BCall_decl "nhacp_end_session",nhacp_end_session
 
