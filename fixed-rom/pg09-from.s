@@ -355,7 +355,6 @@ cold_boot
 	;
 	; Library routines
 	;
-	include "../lib/memcpy8.s"
 	include "../lib/memcpy16.s"
 	include "../lib/memset8.s"
 	include "../lib/memset16.s"
@@ -364,14 +363,11 @@ cold_boot
 	include "../lib/parsedec.s"
 	include "../lib/parsehex.s"
 	include "../lib/parsetbl.s"
-	include "../lib/parsetok.s"
 	include "../lib/parsews.s"
 	include "../lib/parseeol.s"
 	include "../lib/printhex.s"
 	include "../lib/printdec.s"
 	include "../lib/puts.s"
-	include "../lib/strcmp.s"
-	include "../lib/strtoupper.s"
 	include "../lib/toupper.s"
 	include "../lib/mulDx10.s"
 	include "../lib/udiv16.s"
