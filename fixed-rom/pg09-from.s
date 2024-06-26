@@ -789,8 +789,8 @@ mc6839_init
 	ldx	#mc6839_trampoline	; destination in fixed RAM
 	ldy	#mc6839_invoke
 	lda	#mc6839_invoke_size
-;	jsr	memcpy8
-	rts
+	jsr	memcpy8
+	puls	A,X,Y,PC		; restore and return
 
 ;
 ; mc6839_call
