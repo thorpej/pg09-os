@@ -133,8 +133,9 @@ timer_list
 ;
 ; Space for the FP09 ROM bank trampoline.
 ;
-	export	mc6839_trampoline
-mc6839_trampoline rmb	$15
+	export	mc6839_trampoline, mc6839_trampoline_size
+mc6839_trampoline_size	equ	$15
+mc6839_trampoline	rmb	mc6839_trampoline_size
 	endif
 
 ;
