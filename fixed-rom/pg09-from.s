@@ -725,7 +725,7 @@ mc6839_bankout
 	tfr	D,X			; FPCB into X
 	lda	fpcb_savebank,X		; get prev bank #
 	sta	ROM_BANK_REG		; inline fast ROM bank switch
-	puls	A,B,X,CC,PC		; restore and return
+	puls	A,X,CC,PC		; restore and return
 
 ;
 ; mc6839_invoke
