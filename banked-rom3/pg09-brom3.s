@@ -35,7 +35,7 @@
 
 ;
 ; This bank contains the MC6839 "FP09" IEEE floating point math library,
-; which has its own calling convention, and thus does not used the standing
+; which has its own calling convention, and thus does not used the standard
 ; Playground "banked call" mechanism.
 ;
 
