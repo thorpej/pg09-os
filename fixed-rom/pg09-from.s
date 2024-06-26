@@ -799,7 +799,8 @@ mc6839_init_panicstr
 	puls	A,X,Y,PC		; restore and return
 
 ;
-; mc6839_call
+; fp09_fpreg
+; fp09_fpstak
 ;	Call the FP09 package using the specified interface.
 ;
 ; Arguments --
@@ -811,26 +812,23 @@ mc6839_init_panicstr
 ; Clobbers --
 ;	None.
 ;
-mc6839_call	macro
+fp09_fpreg
 	leas	-4,S			; make room entry point and saved X
 	stx	,S			; save X
-	ldx	#SysAddr_BankedROM+fp09_ent_\1
-	stx	2,S			; stash entry point for trampoline
+	ldx	#SysAddr_BankedROM+fp09_ent_fpreg
+1	stx	2,S			; stash entry point for trampoline
 	puls	X			; restore X
 	jmp	mc6839_trampoline	; jump off the trampoline into FP09
-	endm
-
-fp09_fpreg
-	mc6839_call "fpreg"
 
 fp09_fpstak
-	mc6839_call "fpstak"
+	leas	-4,S			; make room entry point and saved X
+	stx	,S			; save X
+	ldx	#SysAddr_BankedROM+fp09_ent_fpstak
+	bra	1B
 
 	else
 
 fp09_fpreg
-	jmp	exit
-
 fp09_fpstak
 	jmp	exit
 
