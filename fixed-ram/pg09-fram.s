@@ -129,6 +129,14 @@ timer_list
 	include "../drivers/w65c51/w65c51-nhacp-ramvars.s"
 	endif
 
+	if CONFIG_MC6839
+;
+; Space for the FP09 ROM bank trampoline.
+;
+	export	mc6839_trampoline
+mc6839_trampoline rmb	$15
+	endif
+
 ;
 ; The monitor keeps an FCB and a file I/O args block for its own usage.
 ;

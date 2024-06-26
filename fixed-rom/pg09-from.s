@@ -39,11 +39,13 @@
 	include "../sys-api/pg09-os.exp"
 	include "../sys-api/display-api.exp"
 	include "../sys-api/file-api.exp"
+	include "../sys-api/fp09-api.exp"
 	include "../sys-api/i2c-api.exp"
 	include "../sys-api/timer-api.exp"
 
 	include "../banked-rom1/pg09-brom1.exp"
 	include "../banked-rom2/pg09-brom2.exp"
+	include "../banked-rom3/pg09-brom3.exp"
 
 	include	"pg09-from-abi-head.s"	; sets origin
 
@@ -125,6 +127,13 @@ warmer_boot
 	; Reset all timers.
 	;
 	jsr	timer_reset
+
+	if CONFIG_MC6839
+	;
+	; Reset the floating point package.
+	;
+	jsr	mc6839_init
+	endif
 
 	;
 	; Re-initialize the console.
@@ -319,6 +328,11 @@ cold_boot
 	jsr	puts
 	jsr	puts_crlf
 
+	if CONFIG_MC6839
+	jsr	iputs
+	fcn	"MC6839 COPYRIGHT (C) MOTOROLA 1982\r\n"
+	endif
+
 	;
 	; Report the CPU we're built for and it's clock speed.
 	;
@@ -355,6 +369,7 @@ cold_boot
 	;
 	; Library routines
 	;
+	include "../lib/memcpy8.s"
 	include "../lib/memcpy16.s"
 	include "../lib/memset8.s"
 	include "../lib/memset16.s"
@@ -657,6 +672,163 @@ brom_call
 	; 0,S		updated CC
 	;
 	puls	CC,A,X,U,PC	; Restore and return.
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;
+	; MC6839 Glue
+	;
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	if CONFIG_MC6839
+
+;
+; mc6839_bankin
+;	Internal helper routine to switch to the FP09 ROM bank.
+;
+; Arguments --
+;	D -- pointer to FPCB (matches the FP09 ABI)
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+mc6839_bankin
+	pshs	A,B,X			; save registers
+	tfr	D,X			; FPCB into X
+	lda	#fp09_bank		; get bank #
+	ldb	ROM_BANK_REG		; inline fast rom bank switch
+	sta	ROM_BANK_REG
+	stb	fpcb_savebank,X		; save prev bank #
+	puls	A,B,X,PC		; restore and return
+
+;
+; mc6839_bankout
+;	Internal helper routine to swith from the FP09 ROM bank.
+;
+; Arguments --
+;	D -- pointer to FPCB (matches the FP09 ABI)
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+; Notes --
+;	It's important to preserve the CC register here, since the
+;	caller may have performed a floating point comparison.
+;
+mc6839_bankout
+	pshs	A,X,CC			; save registers
+	tfr	D,X			; FPCB into X
+	lda	fpcb_savebank,X		; get prev bank #
+	sta	ROM_BANK_REG		; inline fast ROM bank switch
+	puls	A,B,X,CC,PC		; restore and return
+
+;
+; mc6839_invoke
+;	Trampoline function for the FP09 entry.
+;
+; Arguments --
+;	The stack looks like this when we arrive here via tail-call:
+;
+;	3,S
+;	2,S	return PC
+;	1,S
+;	0,S	absolute address of FP09 entry point
+;
+;	The return PC points to the FP09 opcode that we need to patch
+;	into the trampoline.
+;
+; Returns --
+;	Returns from FPREG.
+;
+; Clobbers --
+;	None.
+;
+; Notes --
+;	This is copied into fixed RAM because self-modifying code is
+;	needed, and invoked there.
+;
+mc6839_invoke
+	pshs	A			; save A
+	lda	[3,S]			; get opcode from return PC
+	inc	3,S			; advance return PC past opcode
+	sta	mc6839_invoke_opc,PCR	; patch opcode
+	puls	A			; restore A
+	jsr	mc6839_bankin		; switch to MC6839 bank
+	jsr	[,S++]			; boing!
+mc6839_invoke_opc
+	fcc	0			; patched at run-time
+	jmp	mc6839_bankout		; tail-call to restore ROM bank
+mc6839_invoke_end
+
+;
+; NOTE: ANY TIME mc6839_invoke() CHANGES, YOU MUST UPDATE THE SIZE
+; OF mc6839_trampoline() IN THE FIXED RAM REGION.
+;
+mc6839_invoke_size	equ	(mc6839_invoke_end - mc6839_invoke)
+
+;
+; mc6839_init
+;	Initialize the FP09 ROM trampoline.
+;
+; Arguments --
+;	None.
+;
+; Returns --
+;	None.
+;
+; Clobbers --
+;	None.
+;
+mc6839_init
+	pshs	A,X,Y			; save registers
+	ldx	#mc6839_trampoline	; destination in fixed RAM
+	ldy	#mc6839_invoke
+	lda	#mc6839_invoke_size
+;	jsr	memcpy8
+	rts
+
+;
+; mc6839_call
+;	Call the FP09 package using the specified interface.
+;
+; Arguments --
+;	Defined by the FP09 call.
+;
+; Returns --
+;	Defined by the FP09 call.
+;
+; Clobbers --
+;	None.
+;
+mc6839_call	macro
+	leas	-4,S			; make room entry point and saved X
+	stx	,S			; save X
+	ldx	#SysAddr_BankedROM+fp09_ent_\1
+	stx	2,S			; stash entry point for trampoline
+	puls	X			; restore X
+	jmp	mc6839_trampoline	; jump off the trampoline into FP09
+	endm
+
+fp09_fpreg
+	mc6839_call "fpreg"
+
+fp09_fpstak
+	mc6839_call "fpstak"
+
+	else
+
+fp09_fpreg
+	jmp	exit
+
+fp09_fpstak
+	jmp	exit
+
+	endif
 
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;

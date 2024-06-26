@@ -85,6 +85,9 @@ XSysSubr_\1	fdb	\2
 
 	SysSubr "i2c_exec",i2c_exec
 
+	SysSubr "fp09_fpreg",fp09_fpreg
+	SysSubr "fp09_fpstak",fp09_fpstak
+
 	;
 	; System ADDRESS equates.  These are the exported names of
 	; important system addresses that programs might need to
@@ -98,7 +101,7 @@ SysAddr		macro
 XSysAddr_\1	equ	\2
 XSysAddr_\1_size equ	\3
 		endm
-	
+
 	SysAddr "LowBankedRAM0",LBRAM0_START,LBRAM0_SIZE
 	SysAddr "LowBankedRAM1",LBRAM1_START,LBRAM1_SIZE
 	SysAddr "LowBankedRAM",LBRAM0_START,LBRAM0_SIZE+LBRAM1_SIZE
