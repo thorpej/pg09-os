@@ -1,0 +1,301 @@
+;
+; Copyright (c) 2023, 2024 Jason R. Thorpe.
+; All rights reserved.
+;
+; Redistribution and use in source and binary forms, with or without
+; modification, are permitted provided that the following conditions
+; are met:
+; 1. Redistributions of source code must retain the above copyright
+;    notice, this list of conditions and the following disclaimer.
+; 2. Redistributions in binary form must reproduce the above copyright
+;    notice, this list of conditions and the following disclaimer in the
+;    documentation and/or other materials provided with the distribution.
+;
+; THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+; IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+; OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+; IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+; INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+; BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+; AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+; OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+; OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+; SUCH DAMAGE.
+;
+
+	if	fp09_api_exp_included
+	else
+fp09_api_exp_included	equ	1
+
+;
+; Exports related to the MC6839 "FP09" IEEE Floating Point package as
+; integrated into the 6809 Playground.
+;
+; The API / ABI of the MC6839 is thoroughly documented in the MC6839
+; manual.  In the Playground, the MC6839 image resides in banked ROM,
+; so the calling mechanism for applications is slightly different (and
+; accomplished with wrappers in fp09-lib.s).
+;
+; The following SysSubrs also support this API:
+;
+;	SysSubr_fp09_fpreg
+;	SysSubr_fp09_fpstak
+;
+; The address of the FP09 trap handler trampoline can be acquired by doing:
+;
+;	ldx	[SysData_fp09_ttramp]
+;
+
+;
+; Entry points as documented in the MC6839 manual.  These are offsets
+; from the MC6839 base address.
+;
+fp09_ent_fpreg		equ	$3d	; register-based calls
+fp09_ent_fpstak		equ	$3f	; stack-based calls
+
+;
+; FP09 operation codes.
+;
+; See Appendix A in the MC6839 manual.
+;
+fp09_opc_fab		equ	$1e	; Absolute Value
+fp09_opc_fadd		equ	$00	; Add
+fp09_opc_bindec		equ	$1c	; Binary Floating to Decimal String
+fp09_opc_fcmp		equ	$8a	; Compare
+fp09_opc_ftcmp		equ	$cc	; Trapping Compare
+fp09_opc_fpcmp		equ	$8e	; Predicate Compare
+fp09_opc_ftpcmp		equ	$d0	; Trapping Predicate Compare
+fp09_opc_decbin		equ	$22	; Decimal String to Binary Floating
+fp09_opc_fdiv		equ	$06	; Divide
+fp09_opc_ffixs		equ	$16	; Floating to 16-bit Integer
+fp09_opc_ffixd		equ	$18	; Floating to 32-bit Integer
+fp09_opc_fflts		equ	$24	; 16-bit Integer to Floating
+fp09_opc_ffltd		equ	$26	; 32-bit Integer to Floating
+fp09_opc_fint		equ	$14	; Floating Integer Part
+fp09_opc_fmov		equ	$9a	; Floating Move (and maybe convert)
+fp09_opc_fmul		equ	$04	; Multiply
+fp09_opc_fneg		equ	$20	; Negate
+fp09_opc_frem		equ	$08	; Remainder
+fp09_opc_fsub		equ	$0f	; Subtract
+fp09_opc_fsqrt		equ	$12	; Square Root
+
+;
+; FP09 calls are made by calling the appropriate entry point (for
+; register- or stack-based calls) immediately followed be the opcode
+; in the instruction stream.
+;
+fp09_rcall		macro
+			jsr	[SysSubr_fp09_fpreg]
+			fcc	fp09_opc_\1
+			endm
+
+fp09_scall		macro
+			jsr	[SysSubr_fp09_fpstak]
+			fcc	fp09_opc_\1
+			endm
+
+;
+; Argument passing conventions.
+;
+; There are 3 main types of functions in FP09:
+;
+; Monadic			Single FP argument, single result
+;
+; Dyadic			Two FP arguments, single result
+;
+; Comparisons			Two FP arguments, one parameter argument,
+;				result in CC
+;
+; FMOV, DECBIN, and BINDEC are special and do not conform to the conventions
+; for the other three.
+;
+; REGISTER CALLS:
+;
+; Monadic:
+;
+;	Y	address of arg
+;	X	address of result
+;	D	address of FPCB
+;
+; Dyadic:
+;
+;	U	address of arg1
+;	Y	address of arg2
+;	X	address of result
+;	D	address of FPCB
+;
+; Comparisons:
+;
+;	U	address of arg1
+;	Y	address of arg2
+;	X	parameter word
+;	D	address of FPCB
+;
+;	Predicate compares update Z:
+;		Z = 1 -> affirmed
+;		Z = 0 -> not affirmed
+;
+; STACK CALLS:
+; N.B. Arguments and results are pushed onto the stack by value, not
+; by reference.
+;
+; Monadic:
+;
+;	Push arg
+;	Push address of FPCB
+;	<call>
+;	Pull result
+;
+; Dyadic:
+;
+;	Push arg1
+;	Push arg2
+;	Push address of FPCB
+;	<call>
+;	Pull result
+;
+; Comparisons:
+;
+;	Push arg1
+;	Push arg2
+;	Push parameter word
+;	Push address of FPCB
+;	<call>
+;	Pull result[*]
+;
+;	[*] If condition code compare, no result is placed on the stack.
+;	Predicate compares have a single byte result:
+;		 0 = affirmed
+;		-1 = not affirmed
+; 
+
+;
+; Floating Point Control Block
+;
+;	u8	fp-control	control byte
+;	u8	fp-enable	trap enable mask
+;	u8	fp-status	status mask
+;	u8	fp-status2	secondary status mask
+;	u16	fp-trampoline	trap trampoline address
+;	;
+;	; Extra Playground OS-specific fields.  Because FP09 lives
+;	; in banked ROM, a trampoline is placed in the fp-trap field
+;	; that takes care of bank-switching before (and after) calling
+;	; the real trap handler.  FP09 does not access these fields.
+;	;
+;	u8	fp-savebank	saved ROM bank
+;	u8	fp-spare	spare byte
+;	u16	fp-trap		trap handler address
+;
+; In "vanilla" FP09, the fp-traptramp is the real trap handler address.
+; However, since the Playground keeps FP09 in a ROM bank, the kernel
+; provides a trampoline for invoking the trap handler, and it's this
+; trampoline that FP09 needs to know about.
+;
+fpcb_control		equ	0
+fpcb_enable		equ	(fpcb_control + 1)
+fpcb_status		equ	(fpcb_enable + 1)
+fpcb_status2		equ	(fpcb_status + 1)
+fpcb_trampoline		equ	(fpcb_status2 + 1)
+fpcb_savebank		equ	(fpcb_trap + 2)
+fpcb_spare		equ	(fpcb_savebank + 1)
+fpcb_trap		equ	(fpcb_spare + 1)
+fpcb_fpcbsz		equ	(fpcb_realtrap + 2)
+
+;
+; FP09 rounding modes
+;
+FP09_RN			equ	0		; Round to Nearest
+FP09_RZ			equ	1		; Round towards Zero
+FP09_RP			equ	2		; Round towards +Inf
+FP09_RM			equ	3		; Round towards -Inf
+
+;
+; FP09 precisions
+;
+FP09_PS			equ	0		; Single Precision
+FP09_PD			equ	1		; Double Precision
+FP09_PE			equ	2		; Extended Precision
+FP09_PE_RS		equ	3		; Extended, round to Single
+FP09_PE_RD		equ	4		; Extended, round to Double
+
+;
+; FPCB control byte
+;
+; (Bit names inspired by the BSD/Solaris <ieeefp.h> names.)
+;
+FP09_CTL_CP		equ	$00		; projective closure
+FP09_CTL_CA		equ	$01		; affine closure
+FP09_CTL_R_MASK		equ	(3 << 1)	; Rounding mode mask
+FP09_CTL_NRM		equ	(1 << 3)	; Force Normalization
+FP09_CTL_P_MASK		equ	(7 << 5)	; Precision mask
+
+FP09_CTRL_DEFAULT	equ	0
+
+;
+; FPCB enable and status bytes
+;
+; (Bit names inspired by the BSD/Solaris <ieeefp.h> names.)
+;
+FP09_X_INV		equ	(1 << 0)	; Invalid Operation
+FP09_X_OVF		equ	(1 << 1)	; Overflow
+FP09_X_UNF		equ	(1 << 2)	; Underflow
+FP09_X_DZ		equ	(1 << 3)	; Division by zero
+FP09_X_UNOR		equ	(1 << 4)	; Unordered
+FP09_X_IOV		equ	(1 << 5)	; Integer Overflow
+FP09_X_IMP		equ	(1 << 6)	; Imprecision (inexact)
+
+;
+; FPCB secondary status byte
+;
+; See the MC6839 manual.
+;
+FP09_IOT_MASK		equ	$1f		; Invalid Operation Type
+
+;
+; FPCB trap types
+;
+FP09_TRAP_INV		equ	0		; Invalid Operation
+FP09_TRAP_OVF		equ	1		; Overflow
+FP09_TRAP_UNF		equ	2		; Underflow
+FP09_TRAP_DZ		equ	3		; Division by zero
+FP09_TRAP_DN		equ	4		; De-normalized
+FP09_TRAP_IOV		equ	5		; Integer Overflow
+FP09_TRAP_IMP		equ	6		; Imprecision (inexact)
+
+;
+; FP09 BCD Strings
+;
+; These are 26 byte objects laid out like so:
+;  0  1                  4 5  6                  24 25
+; |se|4 digit BCD exponent|sf|19 digit BCD fraction|p|
+;
+; se == sign of exponent
+; sf == sign of fraction
+; p  == number of fraction digits to the right of the decimal point
+;
+; The BCD digits are right-justified within each byte and unpacked and
+; are thus suitable for converting directly to ASCII.  Furthermore, since
+; the 6809 is a big-endian architecture, the digits are right-justified
+; within the BCD object itself, with the most-significant digits having
+; lower memory addresses.
+;
+; See section 2.5 of the MC6839 manual.
+;
+fp09_bcd_se		equ	0
+fp09_bcd_exp		equ	1
+fp09_bcd_expsz		equ	4
+fp09_bcd_sf		equ	5
+fp09_bcd_frac		equ	6
+fp09_bcd_fracsz		equ	19
+fp09_bcd_p		equ	25
+fp09_bcd_bcdsz		equ	26
+
+;
+; FP09 BCD sign values.
+;
+FP09_BCD_P		equ	$00		; Plus
+FP09_BCD_M		equ	$0F		; Minus
+
+	endif	; fp09_api_exp_included
