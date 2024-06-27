@@ -766,6 +766,31 @@ mc6839_invoke_opc
 mc6839_invoke_end
 
 ;
+; mc6839_trap_trampoline
+;	Trampoline for FP09 trap handling.  We must switch to
+;	the saved bank before calling the trap handler, and
+;	switch back to the FP09 bank when returning to FP09.
+;
+; Arguments --
+;	U - pointer to FP09 stack frame
+;
+; Returns --
+;	CC - condition codes from trap handler.
+;
+; Clobbers --
+;	None.
+;
+mc6839_trap_trampoline
+	pshs	A,X,CC			; save registers
+	ldx	9,U			; X = pointer to FPCB XXX check offset
+	lda	fpcb_savebank,X		; A = saved bank #
+	sta	ROM_BANK_REG		; inline fast ROM bank switch
+	jsr	[fpcb_trap,X]		; call the trap handler
+	lda	#fp09_bank		; FP09 bank #
+	sta	ROM_BANK_REG		; inline fast ROM bank switch
+	puls	A,X,CC,PC		; restore and return
+
+;
 ; NOTE: ANY TIME mc6839_invoke() CHANGES, YOU MUST UPDATE THE SIZE
 ; OF mc6839_trampoline() IN THE FIXED RAM REGION.
 ;
@@ -826,11 +851,17 @@ fp09_fpstak
 	ldx	#SysAddr_BankedROM+fp09_ent_fpstak
 	bra	1B
 
+fp09_ttramp
+	fdb	mc6839_trap_trampoline
+
 	else
 
 fp09_fpreg
 fp09_fpstak
 	jmp	exit
+
+fp09_ttramp
+	fdb	exit
 
 	endif
 

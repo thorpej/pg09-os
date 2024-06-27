@@ -55,7 +55,7 @@ XSysData_\1	fdb	\2
 	; SysData LINKAGE IS ADDED.  EACH SysData LINKAGE IS 2
 	; BYTES.
 	;
-	org	$FFF0-(2 * 2)
+	org	$FFF0-(3 * 2)
 
 	;
 	; DO NOT CHANGE THE ORDER OR OF THESE STATEMENTS UNLESS YOU KNOW
@@ -65,5 +65,6 @@ XSysData_\1	fdb	\2
 	; OF THE LIST (GROW AWAY FROM THE VECTOR TABLE)!
 	;
 
+	SysData "fp09_ttramp",fp09_ttramp
 	SysData "fs_avail",fs_avail
 	SysData "fs_avail_end",fs_avail_end

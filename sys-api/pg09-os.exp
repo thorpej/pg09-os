@@ -73,6 +73,7 @@ SysSubr_timer_remove equ 57380
 ;
 ;	ldx	SysData_fs_avail
 ;
+SysData_fp09_ttramp equ 65514
 SysData_fs_avail equ 65516
 SysData_fs_avail_end equ 65518
 
