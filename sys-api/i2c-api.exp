@@ -1,0 +1,64 @@
+;
+; Copyright (c) 2022, 2024 Jason R. Thorpe.
+; All rights reserved.
+;
+; Redistribution and use in source and binary forms, with or without
+; modification, are permitted provided that the following conditions
+; are met:
+; 1. Redistributions of source code must retain the above copyright
+;    notice, this list of conditions and the following disclaimer.
+; 2. Redistributions in binary form must reproduce the above copyright
+;    notice, this list of conditions and the following disclaimer in the
+;    documentation and/or other materials provided with the distribution.
+;
+; THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+; IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+; OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+; IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+; INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+; BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+; AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+; OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+; OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+; SUCH DAMAGE.
+;
+
+	if	i2c_api_exp_included
+	else
+i2c_api_exp_included	equ	1
+
+;
+; Exports related to I2C device access on the 6809 Playground.
+;
+; This ends up as part of the OS ABI, so don't change this unless you
+; know what you're doing!
+;
+; The following SysSubrs also support the I2C API:
+;
+;	SysSubr_i2c_exec
+;
+
+;
+; I2C command control block:
+;
+;	u8	devaddr		7-bit I2C device address
+;	u8	opcode		operation code; see below
+;	u8	cmdlen		command length
+;	u8	datalen		data length
+;	u16	cmdptr		command buffer pointer
+;	u16	dataptr		data buffer pointer
+;
+i2c_cb_devaddr			equ	0
+i2c_cb_opcode			equ	(i2c_cb_devaddr + 1)
+i2c_cb_cmdlen			equ	(i2c_cb_opcode + 1)
+i2c_cb_datalen			equ	(i2c_cb_cmdlen + 1)
+i2c_cb_cmdptr			equ	(i2c_cb_datalen + 1)
+i2c_cb_dataptr			equ	(i2c_cb_cmdptr + 2)
+i2c_cb_cbsz			equ	(i2c_cb_dataptr + 2)
+
+i2c_opbit_read			equ	$01
+i2c_op_read_with_stop		equ	i2c_opbit_read
+i2c_op_write_with_stop		equ	0
+
+	endif	; i2c_api_exp_included
