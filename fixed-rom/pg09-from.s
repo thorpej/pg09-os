@@ -789,7 +789,7 @@ mc6839_init
 	ldx	#mc6839_init_panicstr
 	jmp	panic
 mc6839_init_panicstr
-	fcn	"ERROR: mc6839_invoke_size != mc6839_trampoline_size\r\n"
+	fcn	"mc6839_invoke_size != mc6839_trampoline_size\r\n"
 	endif
 	pshs	A,X,Y			; save registers
 	ldx	#mc6839_trampoline	; destination in fixed RAM
